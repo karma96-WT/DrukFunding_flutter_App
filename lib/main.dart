@@ -1,48 +1,47 @@
+import 'package:drukfunding/create_page.dart';
 import 'package:flutter/material.dart';
 import 'ProfilePage.dart';
 import 'SearchPage.dart';
 import 'FavouritePage.dart';
 import 'package:drukfunding/model/Project.dart';
 
-// --- 1. Data Model ---
-
 // Mock Data List
 final List<Project> projects = [
   Project(
     title: 'Smart Eco-Garden Kit',
     creator: 'Green Renovations',
-    imageUrl: 'https://placehold.co/600x400/1B4D3E/FFFFFF?text=Eco+Garden',
+    imageUrl: 'assets/images/OIP.webp',
     category: 'Sustainable',
     raised: 7500,
     goal: 10000,
-    creatorImageUrl: 'https://placehold.co/50x50/3498db/FFFFFF?text=GR',
+    creatorImageUrl: 'assets/images/OIP.webp',
   ),
   Project(
     title: 'Quest for Aethelgard',
     creator: 'Pixel Forge',
-    imageUrl: 'https://placehold.co/600x400/8E44AD/FFFFFF?text=Fantasy+Game',
+    imageUrl: 'assets/images/image2.webp',
     category: 'Gaming',
     raised: 28000,
     goal: 25000,
-    creatorImageUrl: 'https://placehold.co/50x50/e74c3c/FFFFFF?text=PF',
+    creatorImageUrl: 'assets/images/OIP.webp',
   ),
   Project(
     title: 'EcoWear Apparel Line',
     creator: 'Conscious Threads',
-    imageUrl: 'https://placehold.co/600x400/2C3E50/FFFFFF?text=Eco+Wear',
+    imageUrl: 'assets/images/image3.webp',
     category: 'Fashion',
     raised: 12000,
     goal: 15000,
-    creatorImageUrl: 'https://placehold.co/50x50/2ecc71/FFFFFF?text=CT',
+    creatorImageUrl: 'assets/images/OIP.webp',
   ),
   Project(
     title: 'The Daily Loaf Bakery',
     creator: 'Artisan Breads Co.',
-    imageUrl: 'https://placehold.co/600x400/D35400/FFFFFF?text=Bakery',
+    imageUrl: 'assets/images/image4.webp',
     category: 'Food',
     raised: 4000,
     goal: 8000,
-    creatorImageUrl: 'https://placehold.co/50x50/f1c40f/FFFFFF?text=AB',
+    creatorImageUrl: 'assets/images/OIP.webp',
   ),
 ];
 
@@ -93,6 +92,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _pages = [
     const HomeContent(),
     const SearchPage(),
+    const CreatePage(),
     const FavouritePage(),
     const ProfilePage(),
   ];
@@ -103,13 +103,17 @@ class _HomePageState extends State<HomePage> {
       elevation: 0,
       backgroundColor: const Color.fromARGB(255, 47, 117, 223),
       title: const Text(
-        'Home',
+        'DrukFunding',
         style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
       ),
-      leading: IconButton(
-        icon: const Icon(Icons.menu, color: Colors.black87),
-        onPressed: () {
-          // Scaffold.of(context).openDrawer();
+      leading: Builder(
+        builder: (context) {
+          return IconButton(
+            icon: const Icon(Icons.menu, color: Colors.black87),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+          );
         },
       ),
       centerTitle: true,
@@ -129,8 +133,8 @@ class _HomePageState extends State<HomePage> {
             radius: 16,
             backgroundColor: Colors.grey[300],
             child: ClipOval(
-              child: Image.network(
-                'https://placehold.co/50x50/3498db/FFFFFF?text=U', // Placeholder for user avatar
+              child: Image.asset(
+                'assets/images/OIP.webp', // Placeholder for user avatar
                 fit: BoxFit.cover,
                 width: 32,
                 height: 32,
@@ -154,10 +158,10 @@ class _HomePageState extends State<HomePage> {
               style: TextStyle(color: Colors.white, fontSize: 24),
             ),
           ),
-          ListTile(leading: Icon(Icons.home), title: Text('Home')),
-          ListTile(leading: Icon(Icons.search), title: Text('Search')),
-          ListTile(leading: Icon(Icons.favorite), title: Text('Favourites')),
-          ListTile(leading: Icon(Icons.person), title: Text('Profile')),
+          ListTile(leading: Icon(Icons.person), title: Text('Profile Setting')),
+          ListTile(leading: Icon(Icons.help), title: Text('Help')),
+          ListTile(leading: Icon(Icons.question_answer), title: Text('FAQ')),
+          ListTile(leading: Icon(Icons.star), title: Text('Rating')),
         ],
       ),
     );
@@ -178,10 +182,12 @@ class _HomePageState extends State<HomePage> {
       items: const <BottomNavigationBarItem>[
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+        BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Create'),
         BottomNavigationBarItem(
           icon: Icon(Icons.favorite_border),
-          label: 'Activity',
+          label: 'Favourite',
         ),
+
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),
           label: 'Profile',
@@ -194,6 +200,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(),
+      drawer: _buildDrawer(),
       body: _pages[_selectedIndex],
       bottomNavigationBar: _buildBottomNavBar(),
     );
@@ -288,7 +295,7 @@ class ProjectCard extends StatelessWidget {
                 alignment: Alignment.bottomLeft,
                 children: [
                   // Project Image
-                  Image.network(
+                  Image.asset(
                     project.imageUrl,
                     fit: BoxFit.cover,
                     height: 200,

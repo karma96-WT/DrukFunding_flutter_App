@@ -1,4 +1,5 @@
 import 'package:drukfunding/create_page.dart';
+import 'package:drukfunding/notification.dart';
 import 'package:flutter/material.dart';
 import 'ProfilePage.dart';
 import 'SearchPage.dart';
@@ -125,19 +126,39 @@ class _HomePageState extends State<HomePage> {
             Icons.notifications_none_outlined,
             color: Colors.black87,
           ),
-          onPressed: () {},
+          onPressed: () {
+            // navigate to notification page
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                // DetailPage is the widget (the "new page") we want to show
+                builder: (context) => const NotificationPage(),
+              ),
+            );
+          },
         ),
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
-          child: CircleAvatar(
-            radius: 16,
-            backgroundColor: Colors.grey[300],
-            child: ClipOval(
-              child: Image.asset(
-                'assets/images/OIP.webp', // Placeholder for user avatar
-                fit: BoxFit.cover,
-                width: 32,
-                height: 32,
+          child: InkWell(
+            onTap: () {
+              // Navigate to the ProfilePage when the avatar is tapped
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProfilePage(),
+                ),
+              );
+            },
+            // Clip the tap effect to the size/shape of the avatar
+            borderRadius: BorderRadius.circular(16),
+            child: CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.grey[300],
+              // Replaced Image.asset placeholder with an Icon placeholder for runnability
+              child: const Icon(
+                Icons.person,
+                size: 20,
+                color: Color.fromARGB(255, 47, 117, 223),
               ),
             ),
           ),

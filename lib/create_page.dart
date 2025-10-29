@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-// Assuming Project model is in this path
 import 'package:drukfunding/model/project.dart';
+import 'package:image_picker/image_picker.dart';
 
 class CreatePage extends StatefulWidget {
   const CreatePage({super.key});
@@ -17,6 +17,81 @@ class _CreatePageState extends State<CreatePage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _creatorController = TextEditingController();
   final TextEditingController _goalController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _taglineController = TextEditingController();
+
+  // variable to hold selected image
+  XFile? _selectedImage;
+
+  // Function to pick image from gallery
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = pickedFile;
+      });
+    } else {
+      // Show a message if user canceled
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image selection canceled.')),
+      );
+    }
+  }
+
+  // Helper widget to build the image picker section
+  Widget _buildImagePicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ⭐ MODIFIED: Wrap the button in a SizedBox for full width
+        SizedBox(
+          width: double.infinity, // Forces the button to take maximum width
+          height: 50,
+          child: ElevatedButton.icon(
+            onPressed: _pickImage,
+            icon: const Icon(Icons.file_upload, color: Colors.white),
+            label: Text(
+              _selectedImage == null ? 'Upload Image' : 'Change Image',
+              style: const TextStyle(color: Colors.white),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Validation/Status text
+        if (_selectedImage == null)
+          // Ensure this text aligns with the start of the button
+          const Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: 4.0,
+            ), // Optional: Match button's internal text padding
+            child: Text(
+              'Please select an image for your project.',
+              style: TextStyle(color: Colors.red, fontSize: 14),
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 4.0,
+            ), // Optional: Match button's internal text padding
+            child: Text(
+              'Image Selected: ${_selectedImage!.name}',
+              style: const TextStyle(color: Colors.green, fontSize: 14),
+            ),
+          ),
+      ],
+    );
+  }
 
   // State for the dropdown field
   String? _selectedCategory;
@@ -154,7 +229,7 @@ class _CreatePageState extends State<CreatePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Launch a New Project'),
+        title: Center(child: const Text('Create campaign here')),
         backgroundColor: Colors.blue,
         elevation: 0,
       ),
@@ -166,7 +241,7 @@ class _CreatePageState extends State<CreatePage> {
           children: [
             // Header
             Text(
-              'Tell us about your idea!',
+              'Describe your idea',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -175,7 +250,7 @@ class _CreatePageState extends State<CreatePage> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Fill out the details below to start crowdfunding.',
+              'Fill correct details to get verified faster!!',
               style: TextStyle(fontSize: 16, color: Colors.black54),
             ),
             const SizedBox(height: 30),
@@ -198,6 +273,24 @@ class _CreatePageState extends State<CreatePage> {
             ),
             const SizedBox(height: 20),
 
+            // Project Description Field
+            _buildTextFormField(
+              controller: _descriptionController,
+              labelText: 'Project Description',
+              hintText: 'e.g., This project aims to revolutionize...',
+              icon: Icons.description_outlined,
+            ),
+            const SizedBox(height: 20),
+
+            // Project Tagline Field
+            _buildTextFormField(
+              controller: _taglineController,
+              labelText: 'Project Tagline',
+              hintText: 'e.g., Innovating the Future',
+              icon: Icons.tag,
+            ),
+            const SizedBox(height: 20),
+
             // Category Dropdown
             _buildCategoryDropdown(),
             const SizedBox(height: 20),
@@ -205,7 +298,7 @@ class _CreatePageState extends State<CreatePage> {
             // Funding Goal Field
             _buildTextFormField(
               controller: _goalController,
-              labelText: 'Funding Goal (\$)',
+              labelText: 'Funding Goal (Nu.)',
               hintText: 'e.g., 50000',
               icon: Icons.attach_money,
               keyboardType: const TextInputType.numberWithOptions(
@@ -225,19 +318,8 @@ class _CreatePageState extends State<CreatePage> {
 
             // Note on Image/Description (would be more complex fields in a real app)
             const SizedBox(height: 10),
-            const Padding(
-              padding: EdgeInsets.only(left: 4.0),
-              child: Text(
-                '*Additional fields for Project Description and Image Upload would be added here.',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-
+            _buildImagePicker(),
+            const SizedBox(height: 30),
             // Submit Button
             ElevatedButton(
               onPressed: _submitProject,

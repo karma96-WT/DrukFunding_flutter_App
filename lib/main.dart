@@ -230,7 +230,7 @@ class ProjectCard extends StatelessWidget {
 
   // Helper to format currency
   String _formatCurrency(double amount) {
-    return '\$${amount.toStringAsFixed(0)}';
+    return 'Nu. ${amount.toStringAsFixed(0)}';
   }
 
   // Helper to build the category tag (e.g., "Gaming")

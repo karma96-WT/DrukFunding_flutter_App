@@ -47,7 +47,7 @@ class ProjectCard extends StatelessWidget {
   const ProjectCard({super.key, required this.project});
 
   String _formatCurrency(double amount) {
-    return '\$${amount.toStringAsFixed(0)}';
+    return 'Nu. ${amount.toStringAsFixed(0)}';
   }
 
   Widget _buildCategoryTag() {

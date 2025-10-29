@@ -92,7 +92,7 @@ class ProjectCard extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Goal: \$${project.goal.toStringAsFixed(0)}'),
+            Text('Goal: Nu. ${project.goal.toStringAsFixed(0)}'),
             Text(
               'Status: $statusText',
               style: TextStyle(
@@ -184,11 +184,6 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Profile'),
-        backgroundColor: Colors.blue,
-        elevation: 0,
-      ),
       body: Column(
         children: [
           // 1. User Header Section
@@ -200,24 +195,24 @@ class _ProfilePageState extends State<ProfilePage>
             child: Column(
               children: [
                 CircleAvatar(
-                  radius: 40,
+                  radius: 30,
                   backgroundImage: NetworkImage(mockUser['profileImageUrl']),
                   backgroundColor: Colors.grey.shade200,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 5),
                 Text(
                   mockUser['name'],
                   style: const TextStyle(
-                    fontSize: 22,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   mockUser['email'],
                   style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 8),
                 // Stat Cards Row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,

@@ -1,43 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:drukfunding/model/notification.dart';
 
-class Notification {
-  final String title;
-  final String description;
-  final IconData icon;
-  Notification({
-    required this.title,
-    required this.description,
-    required this.icon,
-  });
-}
-
-List<Notification> notifications = [
-  Notification(
+List<AppNotification> notifications = [
+  AppNotification(
     title: "New Project: Eco-friendly electric scooter",
     description: "I am making this scooter for urban transport using recycled materials.",
     icon: Icons.electric_scooter,
   ),
-  Notification(
+  AppNotification(
     title: "Campaign Update: Funding Goal Reached!",
     description: "The 'drukfunding' project successfully reached its funding goal of \$5000!",
     icon: Icons.check_circle_outline,
   ),
-  Notification(
+  AppNotification(
     title: "Message from Creator: Ugyen Dorji",
     description: "Thank you for your support! I've posted an update on the progress.",
     icon: Icons.mail_outline,
   ),
-  Notification(
+  AppNotification(
     title: "New Follower: Kinley Wangmo",
     description: "Kinley Wangmo just started following your 'Smart Farm' project.",
     icon: Icons.person_add_alt,
   ),
-  Notification(
+  AppNotification(
     title: "System Alert: Maintenance Scheduled",
     description: "Our services will undergo brief maintenance on Friday at 2:00 AM.",
     icon: Icons.settings,
   ),
 ];
+
+
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -45,24 +37,23 @@ class NotificationPage extends StatefulWidget {
   @override
   State<NotificationPage> createState() => _NotificationState();
 }
-
 class _NotificationState extends State<NotificationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(onPressed:() {
-            Navigator.pop(context,true);
-          },
-            icon: Icon(Icons.arrow_back),
+          Navigator.pop(context,true);
+        },
+          icon: Icon(Icons.arrow_back),
         ),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: const Color.fromARGB(255, 47, 117, 223),
         foregroundColor: Colors.white,
 
-        ),
+      ),
       body: ListView.builder(
-        itemCount: notifications.length,
-        itemBuilder: (context, index){
+          itemCount: notifications.length,
+          itemBuilder: (context, index){
             final notification = notifications[index];
             return Card(
               elevation: 2,
@@ -98,7 +89,9 @@ class _NotificationState extends State<NotificationPage> {
                 contentPadding: const EdgeInsets.all(10.0),
               ),
             );
-        }),
-      );
+          }),
+    );
   }
 }
+
+

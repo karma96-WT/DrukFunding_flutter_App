@@ -5,6 +5,7 @@ import 'ProfilePage.dart';
 import 'SearchPage.dart';
 import 'FavouritePage.dart';
 import 'package:drukfunding/model/Project.dart';
+import 'loginPage.dart';
 
 // Mock Data List
 final List<Project> projects = [
@@ -89,6 +90,25 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+
+  void _handleMenuSelection(String value) {
+    if (value == 'logout') {
+      Navigator.pop(context);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          // DetailPage is the widget (the "new page") we want to show
+          builder: (context) => const LoginPage(),
+        ),
+      );
+       // or navigate to login page
+    } else if (value == 'profile') {
+      // navigate to profile page
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile clicked')),
+      );
+    }
+  }
   // list of pages
   final List<Widget> _pages = [
     const HomeContent(),
@@ -137,33 +157,33 @@ class _HomePageState extends State<HomePage> {
             );
           },
         ),
-        Padding(
-          padding: const EdgeInsets.only(right: 16.0),
-          child: InkWell(
-            onTap: () {
-              // Navigate to the ProfilePage when the avatar is tapped
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ProfilePage(),
-                ),
-              );
-            },
-            // Clip the tap effect to the size/shape of the avatar
-            borderRadius: BorderRadius.circular(16),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.grey[300],
-              // Replaced Image.asset placeholder with an Icon placeholder for runnability
-              child: const Icon(
-                Icons.person,
-                size: 20,
-                color: Color.fromARGB(255, 47, 117, 223),
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.account_circle), // Profile icon
+          onSelected: _handleMenuSelection,
+          itemBuilder: (BuildContext context) => [
+          const PopupMenuItem(
+              value: 'profile',
+              child: Row(
+                children: [
+                  Icon(Icons.person, color: Colors.blue),
+                  SizedBox(width: 10),
+                  Text('Profile'),
+                ],
               ),
             ),
+            const PopupMenuItem(
+              value: 'logout',
+              child: Row(
+                children: [
+                  Icon(Icons.logout, color: Colors.red),
+                  SizedBox(width: 10),
+                  Text('Logout'),
+                ],
+              ),
+            ),
+          ]
           ),
-        ),
-      ],
+    ]
     );
   }
 

@@ -16,6 +16,13 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+try {
+    // This line tries to find the auto-generated Flutter setup file
+    val flutterProject = File(settingsDir, "../.android/flutter.gradle")
+    apply(from = flutterProject)
+} catch (ignored: Exception) {
+    println("Cannot apply flutter.gradle: $ignored")
+}
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"

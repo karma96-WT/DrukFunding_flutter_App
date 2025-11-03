@@ -1,9 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // --- MOCK DATA STRUCTURES FOR PROFILE PAGE ---
 import 'package:drukfunding/model/project.dart';
 
-// Mock User Profile Data
+
+// Mock User Profile Data (Kept for stat cards and fallback)
 final Map<String, dynamic> mockUser = {
   'name': 'Alex Thompson',
   'email': 'alex.t@example.com',
@@ -12,7 +15,7 @@ final Map<String, dynamic> mockUser = {
   'totalProjectsBacked': 5,
 };
 
-// Mock Created Projects
+// Mock Created Projects (Kept as requested)
 final List<Project> createdProjects = [
   Project(
     title: 'Smart Eco-Garden Kit',
@@ -34,7 +37,7 @@ final List<Project> createdProjects = [
   ),
 ];
 
-// Mock Backed Projects
+// Mock Backed Projects (Kept as requested)
 final List<Project> backedProjects = [
   Project(
     title: 'Quantum Computing Handbook',
@@ -58,12 +61,12 @@ final List<Project> backedProjects = [
 ];
 
 // --- REUSABLE PROJECT CARD WIDGET (Simplified for list display) ---
-
+// NOTE: Removed extraneous initState/Future properties from StatelessWidget
 class ProjectCard extends StatelessWidget {
   final Project project;
   final bool isBacked;
 
-  const ProjectCard({super.key, required this.project, this.isBacked = false});
+  ProjectCard({super.key, required this.project, this.isBacked = false});
 
   @override
   Widget build(BuildContext context) {
@@ -105,12 +108,12 @@ class ProjectCard extends StatelessWidget {
         ),
         trailing: isBacked
             ? Text(
-                'Backed!',
-                style: TextStyle(
-                  color: Colors.pink.shade700,
-                  fontWeight: FontWeight.bold,
-                ),
-              )
+          'Backed!',
+          style: TextStyle(
+            color: Colors.pink.shade700,
+            fontWeight: FontWeight.bold,
+          ),
+        )
             : const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
         onTap: () {
           // Placeholder for navigation to project details page
@@ -132,13 +135,23 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
+
   late TabController _tabController;
+  final String? userId = FirebaseAuth.instance.currentUser?.uid;
+  Future<DocumentSnapshot<Map<String, dynamic>>>? _userProfileFuture;
 
   @override
   void initState() {
     super.initState();
-    // Initialize TabController with 2 tabs
     _tabController = TabController(length: 2, vsync: this);
+
+    // Initialize the Future call to fetch profile data
+    if (userId != null) {
+      _userProfileFuture = FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+    }
   }
 
   @override
@@ -147,7 +160,7 @@ class _ProfilePageState extends State<ProfilePage>
     super.dispose();
   }
 
-  // Widget to display user statistics in a card format
+  // Widget to display user statistics in a card format (kept as requested)
   Widget _buildStatCard({
     required String label,
     required String value,
@@ -183,87 +196,123 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
+    if (userId == null || _userProfileFuture == null) {
+      return const Scaffold(
+        body: Center(child: Text('Please log in to view your profile.')),
+      );
+    }
+
+    // Wrap the content in FutureBuilder to fetch and display data
     return Scaffold(
-      body: Column(
-        children: [
-          // 1. User Header Section
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24.0,
-              vertical: 20.0,
-            ),
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundImage: NetworkImage(mockUser['profileImageUrl']),
-                  backgroundColor: Colors.grey.shade200,
+      appBar: AppBar(
+        title: const Text('My Profile'),
+        backgroundColor: Colors.blue,
+      ),
+      body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        future: _userProfileFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(child: Text('Profile data not found.'));
+          }
+
+          // --- Data Extraction ---
+          final realUserData = snapshot.data!.data()!;
+          // Use username from Firestore (or mock name as fallback if data is null)
+          final realName = realUserData['username'] ?? mockUser['name'];
+          // Use email from Firestore (or mock email as fallback if data is null)
+          final realEmail = realUserData['email'] ?? mockUser['email'];
+          final profileImage = realUserData['profileImageUrl'] ?? mockUser['profileImageUrl'];
+
+          return Column(
+            children: [
+              // 1. User Header Section (Using REAL Name and Email)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 20.0,
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  mockUser['name'],
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  mockUser['email'],
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-                const SizedBox(height: 8),
-                // Stat Cards Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                child: Column(
                   children: [
-                    _buildStatCard(
-                      label: 'Created',
-                      value: mockUser['totalProjectsCreated'].toString(),
-                      icon: Icons.lightbulb_outline,
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundImage: NetworkImage(profileImage),
+                      backgroundColor: Colors.grey.shade200,
                     ),
-                    _buildStatCard(
-                      label: 'Backed',
-                      value: mockUser['totalProjectsBacked'].toString(),
-                      icon: Icons.wallet_giftcard,
+                    const SizedBox(height: 5),
+                    Text(
+                      realName, // 👈 DISPLAY REAL NAME/USERNAME
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      realEmail, // 👈 DISPLAY REAL EMAIL
+                      style: const TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 8),
+                    // Stat Cards Row (Kept as requested, still using mock data)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStatCard(
+                          label: 'Created',
+                          value: mockUser['totalProjectsCreated'].toString(),
+                          icon: Icons.lightbulb_outline,
+                        ),
+                        _buildStatCard(
+                          label: 'Backed',
+                          value: mockUser['totalProjectsBacked'].toString(),
+                          icon: Icons.wallet_giftcard,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
 
-          // 2. Tab Bar for Projects
-          TabBar(
-            controller: _tabController,
-            labelColor: Colors.blue[700],
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: Colors.blue[700],
-            tabs: const [
-              Tab(text: 'My Creations'),
-              Tab(text: 'Backed Projects'),
+              // 2. Tab Bar for Projects
+              TabBar(
+                controller: _tabController,
+                labelColor: Colors.blue[700],
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: Colors.blue[700],
+                tabs: const [
+                  Tab(text: 'My Creations'),
+                  Tab(text: 'Backed Projects'),
+                ],
+              ),
+
+              // 3. Tab Content (Expandable ListView)
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Tab 1: Created Projects (Still using mock data)
+                    _buildProjectList(createdProjects, isBacked: false),
+
+                    // Tab 2: Backed Projects (Still using mock data)
+                    _buildProjectList(backedProjects, isBacked: true),
+                  ],
+                ),
+              ),
             ],
-          ),
-
-          // 3. Tab Content (Expandable ListView)
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // Tab 1: Created Projects
-                _buildProjectList(createdProjects, isBacked: false),
-
-                // Tab 2: Backed Projects
-                _buildProjectList(backedProjects, isBacked: true),
-              ],
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  // Helper widget to build the ListView for the tab content
+  // Helper widget to build the ListView for the tab content (kept same)
   Widget _buildProjectList(List<Project> projects, {required bool isBacked}) {
     if (projects.isEmpty) {
       return Center(

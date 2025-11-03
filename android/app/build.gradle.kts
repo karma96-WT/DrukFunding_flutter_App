@@ -1,7 +1,14 @@
 plugins {
+    // 1. Android Application plugin must be first
     id("com.android.application")
-    id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+
+    // 2. Kotlin plugin
+    kotlin("android")
+
+    // 3. Google Services plugin
+    id("com.google.gms.google-services")
+
+    // 4. Flutter plugin MUST be applied LAST
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -41,4 +48,8 @@ android {
 
 flutter {
     source = "../.."
+}
+dependencies{
+    implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
+    implementation("com.google.firebase:firebase-analytics")
 }

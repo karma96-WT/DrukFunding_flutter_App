@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'homePage.dart';
+import 'registration.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,12 +15,68 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailControler = TextEditingController();
   final TextEditingController passwordControler = TextEditingController();
 
-  void Login(){
-    //  handle login function from here
+  // Firebase instance and loading state
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isLoading = false;
+
+  // --- Login Function (UPDATED) ---
+  void Login() async {
+    // 1. Set loading state
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 2. Call Firebase Sign In
+      await _auth.signInWithEmailAndPassword(
+        email: emailControler.text.trim(),
+        password: passwordControler.text.trim(),
+      );
+
+      // 3. Success: Navigate to the main app (CrowdfundingApp)
+      if (mounted) {
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const CrowdfundingApp())
+        );
+      }
+
+    } on FirebaseAuthException catch (e) {
+      String message = 'Login Failed. Invalid email or password.';
+
+      // Customize error messages
+      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+        message = 'Invalid email or password.';
+      } else if (e.code == 'too-many-requests') {
+        message = 'Too many login attempts. Try again later.';
+      }
+
+      // Show error to the user
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red)
+      );
+
+    } catch (e) {
+      // Catch any unexpected errors
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('An unknown error occurred.'), backgroundColor: Colors.red)
+      );
+    } finally {
+      // 4. Reset loading state
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
+
 
   void Register(){
     // push to registration page
+    Navigator.push(context,
+        MaterialPageRoute(builder: (context) => const Registration())
+    );
   }
 
   @override
@@ -34,9 +93,9 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 20),
               const Text('Welcome to DrukFunding!',
                 style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue
                 ),
               ),
               const Text(' Your partner to bring your idea alive!!',
@@ -49,12 +108,13 @@ class _LoginPageState extends State<LoginPage> {
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: TextField(
+                    controller: emailControler,
                   decoration: InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    prefixIcon: Icon(Icons.email)
+                      labelText: 'Email',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      prefixIcon: Icon(Icons.email)
                   ),
                 ),
               ),
@@ -62,11 +122,12 @@ class _LoginPageState extends State<LoginPage> {
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: TextField(
+                  controller: passwordControler,
                   obscureText: true,
                   decoration: InputDecoration(
                     labelText: 'Password',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)
+                        borderRadius: BorderRadius.circular(10)
                     ),
                     prefixIcon: Icon(Icons.lock),
                   ),
@@ -76,13 +137,13 @@ class _LoginPageState extends State<LoginPage> {
               ElevatedButton(
                 onPressed: Login,
                 child: const Text('LOGIN',
-                style: TextStyle(fontSize: 18,color: Colors.white)),
+                    style: TextStyle(fontSize: 18,color: Colors.white)),
                 style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  backgroundColor: Colors.blue,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)
-                  )
+                    minimumSize: const Size(double.infinity, 50),
+                    backgroundColor: Colors.blue,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)
+                    )
                 ),
               ),
               const SizedBox(height: 5),
@@ -100,4 +161,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-

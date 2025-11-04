@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:drukfunding/model/project.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // --- MOCK DATA FOR SEARCH PAGE ---
 final List<Project> allProjects = [
@@ -46,23 +47,28 @@ final List<Project> allProjects = [
 ];
 
 // PROJECT CARD WIDGET
-class ProjectCard extends StatelessWidget {
+class ProjectCard extends StatefulWidget {
   final Project project;
   const ProjectCard({super.key, required this.project});
 
+  @override
+  State<ProjectCard> createState() => _ProjectCardState();
+}
+
+class _ProjectCardState extends State<ProjectCard> {
   String _formatCurrency(double amount) {
     return 'Nu. ${amount.toStringAsFixed(0)}';
   }
 
   Widget _buildCategoryTag() {
     Color tagColor = Colors.orange;
-    if (project.category == 'Gaming') {
+    if (widget.project.category == 'Gaming') {
       tagColor = Colors.deepOrange;
-    } else if (project.category == 'Sustainable') {
+    } else if (widget.project.category == 'Sustainable') {
       tagColor = Colors.blue[700]!;
-    } else if (project.category == 'Fashion') {
+    } else if (widget.project.category == 'Fashion') {
       tagColor = Colors.teal;
-    } else if (project.category == 'Food') {
+    } else if (widget.project.category == 'Food') {
       tagColor = Colors.brown;
     }
 
@@ -73,7 +79,7 @@ class ProjectCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
       ),
       child: Text(
-        project.category,
+        widget.project.category,
         style: const TextStyle(
           color: Colors.white,
           fontSize: 12,
@@ -84,8 +90,8 @@ class ProjectCard extends StatelessWidget {
   }
 
   Widget _buildProgressBar() {
-    double progressValue = project.progress.clamp(0.0, 1.0);
-    Color barColor = project.progress >= 1.0 ? Colors.green : Colors.orange;
+    double progressValue = widget.project.progress.clamp(0.0, 1.0);
+    Color barColor = widget.project.progress >= 1.0 ? Colors.green : Colors.orange;
 
     return LinearProgressIndicator(
       value: progressValue,
@@ -114,7 +120,7 @@ class ProjectCard extends StatelessWidget {
                 alignment: Alignment.bottomLeft,
                 children: [
                   Image.network(
-                    project.imageUrl,
+                    widget.project.imageUrl,
                     fit: BoxFit.cover,
                     height: 200,
                     width: double.infinity,
@@ -151,12 +157,12 @@ class ProjectCard extends StatelessWidget {
                         CircleAvatar(
                           radius: 12,
                           backgroundImage: NetworkImage(
-                            project.creatorImageUrl,
+                            widget.project.creatorImageUrl,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          project.creator,
+                          widget.project.creator,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
@@ -170,7 +176,7 @@ class ProjectCard extends StatelessWidget {
                     bottom: 40,
                     left: 12,
                     child: Text(
-                      project.title,
+                      widget.project.title,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -194,7 +200,7 @@ class ProjectCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _formatCurrency(project.raised),
+                            _formatCurrency(widget.project.raised),
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
@@ -214,7 +220,7 @@ class ProjectCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            _formatCurrency(project.goal),
+                            _formatCurrency(widget.project.goal),
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -281,6 +287,9 @@ class _SearchPageState extends State<SearchPage> {
   // Controller to manage the text field input
   final TextEditingController _searchController = TextEditingController();
 
+  // firebase instance
+  final CollectionReference projectsCollection = FirebaseFirestore.instance.collection('projects');
+
   // List to hold the current filtered search results
   List<Project> _filteredProjects = allProjects;
 
@@ -338,24 +347,27 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ],
           ),
-          child: TextField(
-            controller: _searchController,
-            autofocus: true, // Focus on search bar immediately
-            decoration: InputDecoration(
-              hintText: 'Search projects, creators, or categories...',
-              border: InputBorder.none,
-              prefixIcon: const Icon(Icons.search, color: Colors.blue),
-              // Show a clear button only when text is present
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, color: Colors.grey),
-                      onPressed: _clearSearch,
-                    )
-                  : null,
-              contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              autofocus: true, // Focus on search bar immediately
+              decoration: InputDecoration(
+                hintText: 'Search projects, creators, or categories...',
+                border: InputBorder.none,
+                prefixIcon: const Icon(Icons.search, color: Colors.blue),
+                // Show a clear button only when text is present
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
+              ),
+              // Call filter function whenever the text changes
+              onChanged: _filterProjects,
             ),
-            // Call filter function whenever the text changes
-            onChanged: _filterProjects,
           ),
         ),
         titleSpacing: 0,

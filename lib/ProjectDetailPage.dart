@@ -27,6 +27,10 @@ class _DetailPageState extends State<DetailPage> {
     return DateFormat('dd MMM yyyy').format(date);
   }
 
+  void _onSubmit(){
+    // Logic goes here
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,6 +116,10 @@ class _DetailPageState extends State<DetailPage> {
                   children: [
                     const Icon(Icons.person, color: Colors.blue),
                     const SizedBox(width: 8),
+                    Text('Creator: ', style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),),
                     Text(
                       creator,
                       style: const TextStyle(
@@ -128,6 +136,10 @@ class _DetailPageState extends State<DetailPage> {
                   children: [
                     const Icon(Icons.category, color: Colors.orange),
                     const SizedBox(width: 8),
+                    Text('Category: ', style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),),
                     Text(
                       category,
                       style: const TextStyle(fontSize: 16),
@@ -143,12 +155,13 @@ class _DetailPageState extends State<DetailPage> {
                     const SizedBox(width: 8),
                     Text(
                       'Goal: ${_formatCurrency(goal)}',
-                      style: const TextStyle(fontSize: 16),
+                      style: const TextStyle(fontSize: 16,
+                      fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(width: 20),
                     Text(
                       'Raised: ${_formatCurrency(raised)}',
-                      style: const TextStyle(fontSize: 16, color: Colors.blueGrey),
+                      style: const TextStyle(fontSize: 16, color: Colors.blue),
                     ),
                   ],
                 ),
@@ -160,8 +173,8 @@ class _DetailPageState extends State<DetailPage> {
                     const Icon(Icons.timelapse, color: Colors.purple),
                     const SizedBox(width: 8),
                     Text(
-                      'Duration: $duration',
-                      style: const TextStyle(fontSize: 16),
+                      'Duration: $duration left',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -194,6 +207,24 @@ class _DetailPageState extends State<DetailPage> {
                       ),
                     ],
                   ),
+                const SizedBox(height: 20),
+                Center(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: ()=> {
+
+                      _onSubmit,
+                      },
+                      child: const Text('Back Project'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        elevation: 8
+                      ),
+                    ),
+                  ),
+                )
               ],
             ),
           );

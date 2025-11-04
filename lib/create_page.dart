@@ -1,6 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:drukfunding/model/project.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class CreatePage extends StatefulWidget {
   const CreatePage({super.key});
@@ -12,6 +15,8 @@ class CreatePage extends StatefulWidget {
 class _CreatePageState extends State<CreatePage> {
   // Global key for the Form widget to enable validation and reset
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+  final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
   // Text editing controllers for capturing user input
   final TextEditingController _titleController = TextEditingController();
@@ -19,6 +24,83 @@ class _CreatePageState extends State<CreatePage> {
   final TextEditingController _goalController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _taglineController = TextEditingController();
+  final TextEditingController _durationController = TextEditingController();
+
+
+  Future<void> _submitProject() async {
+    if (_formKey.currentState!.validate()) {
+      if (_selectedImage == null) {
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   const SnackBar(
+        //     content: Text('Please upload an image before submitting.'),
+        //     backgroundColor: Colors.red,
+        //   ),
+        // );
+        // return;
+      }
+
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Prepare the project data
+        final projectData = {
+          'title': _titleController.text.trim(),
+          'creator': _creatorController.text.trim(),
+          'description': _descriptionController.text.trim(),
+          'tagline': _taglineController.text.trim(),
+          'category': _selectedCategory,
+          'goal': double.parse(_goalController.text),
+          'raised': 0.0,
+          'duration': _durationController.text.trim(),
+          'userId': userId,
+          'status': 'pending',
+          'imageUrl': 'https://placehold.co/600x400/3498db/FFFFFF?text=New+Project', // Replace later with uploaded URL
+          'creatorImageUrl': 'https://placehold.co/50x50/3498db/FFFFFF?text=ME',
+          'createdAt': Timestamp.now(),
+        };
+
+        // Save to Firestore under "Projects" collection
+        await FirebaseFirestore.instance.collection('Projects').add(projectData);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Success! Project "${_titleController.text}" has been submitted.',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+
+        // Reset form
+        _formKey.currentState!.reset();
+        _titleController.clear();
+        _creatorController.clear();
+        _goalController.clear();
+        _descriptionController.clear();
+        _taglineController.clear();
+        _durationController.clear();
+        setState(() {
+          _selectedCategory = null;
+          _selectedImage = null;
+        });
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error submitting project: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
 
   // variable to hold selected image
   XFile? _selectedImage;
@@ -45,9 +127,9 @@ class _CreatePageState extends State<CreatePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ⭐ MODIFIED: Wrap the button in a SizedBox for full width
+
         SizedBox(
-          width: double.infinity, // Forces the button to take maximum width
+          width: double.infinity,
           height: 50,
           child: ElevatedButton.icon(
             onPressed: _pickImage,
@@ -96,12 +178,13 @@ class _CreatePageState extends State<CreatePage> {
   // State for the dropdown field
   String? _selectedCategory;
   final List<String> _categories = [
-    'Sustainable',
+    'Innovation',
     'Gaming',
     'Fashion',
     'Food',
     'Art',
     'Technology',
+    'Culture',
   ];
 
   @override
@@ -186,53 +269,11 @@ class _CreatePageState extends State<CreatePage> {
     );
   }
 
-  // Mock function to handle form submission
-  void _submitProject() {
-    if (_formKey.currentState!.validate()) {
-      // Form fields are valid, proceed to create the project object
-      final newProject = Project(
-        title: _titleController.text,
-        creator: _creatorController.text,
-        // Mocked data for simplicity in a creation form
-        imageUrl: 'https://placehold.co/600x400/3498db/FFFFFF?text=New+Project',
-        category: _selectedCategory!,
-        raised: 0.0, // Starts at 0 when created
-        goal: double.parse(_goalController.text),
-        creatorImageUrl: 'https://placehold.co/50x50/3498db/FFFFFF?text=ME',
-      );
 
-      // In a real application, you would send this 'newProject' data to a database.
-
-      // Show confirmation SnackBar
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Success! Project "${newProject.title}" launched with a \$${newProject.goal.toStringAsFixed(0)} goal.',
-          ),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-
-      // Optionally reset the form after successful submission
-      _formKey.currentState!.reset();
-      _titleController.clear();
-      _creatorController.clear();
-      _goalController.clear();
-      setState(() {
-        _selectedCategory = null;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Center(child: const Text('Create campaign here')),
-        backgroundColor: Colors.blue,
-        elevation: 0,
-      ),
       // Use ListView to ensure the form is scrollable and avoids keyboard overflow
       body: Form(
         key: _formKey,
@@ -240,18 +281,22 @@ class _CreatePageState extends State<CreatePage> {
           padding: const EdgeInsets.all(24.0),
           children: [
             // Header
-            Text(
-              'Describe your idea',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue[800],
+            Center(
+              child: Text(
+                'Describe your idea',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[800],
+                ),
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Fill correct details to get verified faster!!',
-              style: TextStyle(fontSize: 16, color: Colors.black54),
+            Center(
+              child: const Text(
+                'Fill correct details to get verified faster!!',
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
             ),
             const SizedBox(height: 30),
 
@@ -299,7 +344,7 @@ class _CreatePageState extends State<CreatePage> {
             _buildTextFormField(
               controller: _goalController,
               labelText: 'Funding Goal (Nu.)',
-              hintText: 'e.g., 50000',
+              hintText: 'e.g., Nu. 50000',
               icon: Icons.attach_money,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -315,6 +360,14 @@ class _CreatePageState extends State<CreatePage> {
                 return null;
               },
             ),
+            const SizedBox(height: 20),
+            _buildTextFormField(
+              controller: _durationController,
+              labelText: 'Project Duration',
+              hintText: 'e.g., 15 days',
+              icon: Icons.timelapse,
+            ),
+            const SizedBox(height: 20),
 
             // Note on Image/Description (would be more complex fields in a real app)
             const SizedBox(height: 10),
@@ -332,7 +385,7 @@ class _CreatePageState extends State<CreatePage> {
                 elevation: 4,
               ),
               child: const Text(
-                'Launch Project',
+                'Submit Project',
                 style: TextStyle(
                   fontSize: 18,
                   color: Colors.white,

@@ -19,7 +19,6 @@ class _LoginPageState extends State<LoginPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
 
-  // --- Login Function (UPDATED) ---
   void Login() async {
     // 1. Set loading state
     setState(() {

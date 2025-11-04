@@ -4,6 +4,7 @@ import 'package:drukfunding/model/project.dart';
 // --- MOCK DATA FOR SEARCH PAGE ---
 final List<Project> allProjects = [
   Project(
+    projectId: 'dummyId231',
     title: 'Smart Eco-Garden Kit',
     creator: 'Green Renovations',
     imageUrl: 'https://placehold.co/600x400/1B4D3E/FFFFFF?text=Eco+Garden',
@@ -13,6 +14,7 @@ final List<Project> allProjects = [
     creatorImageUrl: 'https://placehold.co/50x50/3498db/FFFFFF?text=GR',
   ),
   Project(
+    projectId: 'dummyId1',
     title: 'Quest for Aethelgard: The RPG',
     creator: 'Pixel Forge',
     imageUrl: 'https://placehold.co/600x400/8E44AD/FFFFFF?text=Fantasy+Game',
@@ -22,6 +24,7 @@ final List<Project> allProjects = [
     creatorImageUrl: 'https://placehold.co/50x50/e74c3c/FFFFFF?text=PF',
   ),
   Project(
+    projectId: 'dummy23434444Id1',
     title: 'EcoWear Apparel Line',
     creator: 'Conscious Threads',
     imageUrl: 'https://placehold.co/600x400/2C3E50/FFFFFF?text=Eco+Wear',
@@ -31,6 +34,7 @@ final List<Project> allProjects = [
     creatorImageUrl: 'https://placehold.co/50x50/2ecc71/FFFFFF?text=CT',
   ),
   Project(
+    projectId: 'dummy4332Id1',
     title: 'The Daily Loaf Bakery',
     creator: 'Artisan Breads Co.',
     imageUrl: 'https://placehold.co/600x400/D35400/FFFFFF?text=Bakery',

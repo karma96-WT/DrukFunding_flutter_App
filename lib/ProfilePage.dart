@@ -18,6 +18,7 @@ final Map<String, dynamic> mockUser = {
 // Mock Created Projects (Kept as requested)
 final List<Project> createdProjects = [
   Project(
+    projectId: 'wewfer',
     title: 'Smart Eco-Garden Kit',
     creator: 'Alex Thompson',
     imageUrl: 'https://placehold.co/600x400/1B4D3E/FFFFFF?text=Eco+Garden',
@@ -27,6 +28,7 @@ final List<Project> createdProjects = [
     creatorImageUrl: mockUser['profileImageUrl'],
   ),
   Project(
+    projectId: 'wewferrr',
     title: 'Minimalist Travel Backpack',
     creator: 'Alex Thompson',
     imageUrl: 'https://placehold.co/600x400/7F8C8D/FFFFFF?text=Backpack',
@@ -40,6 +42,7 @@ final List<Project> createdProjects = [
 // Mock Backed Projects (Kept as requested)
 final List<Project> backedProjects = [
   Project(
+    projectId: 'wewfeeer',
     title: 'Quantum Computing Handbook',
     creator: 'Tech Gurus',
     imageUrl: 'https://placehold.co/600x400/F39C12/FFFFFF?text=Quantum',
@@ -49,6 +52,7 @@ final List<Project> backedProjects = [
     creatorImageUrl: 'https://placehold.co/50x50/e74c3c/FFFFFF?text=TG',
   ),
   Project(
+    projectId: 'wewferddddd',
     title: 'Local Farm-to-Table Cafe',
     creator: 'The Daily Loaf Bakery',
     imageUrl: 'https://placehold.co/600x400/D35400/FFFFFF?text=Bakery',

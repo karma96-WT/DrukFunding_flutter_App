@@ -7,6 +7,7 @@ import 'package:drukfunding/model/Project.dart';
 // --- MOCK PROJECT DATA (Simulating liked projects) ---
 final List<Project> projects = [
   Project(
+    projectId: '1234',
     title: 'Smart Eco-Garden Kit',
     creator: 'Green Renovations',
     // Mock image paths are replaced with placeholders for runnable code
@@ -17,6 +18,7 @@ final List<Project> projects = [
     creatorImageUrl: 'https://placehold.co/50x50/00A388/ffffff?text=GR',
   ),
   Project(
+    projectId: '1234',
     title: 'Quest for Aethelgard (Funded!)',
     creator: 'Pixel Forge',
     imageUrl: 'https://placehold.co/600x400/9933FF/ffffff?text=Aethelgard',
@@ -26,6 +28,7 @@ final List<Project> projects = [
     creatorImageUrl: 'https://placehold.co/50x50/9933FF/ffffff?text=PF',
   ),
   Project(
+    projectId: '1234',
     title: 'EcoWear Apparel Line',
     creator: 'Conscious Threads',
     imageUrl: 'https://placehold.co/600x400/FF6666/ffffff?text=EcoWear',
@@ -35,6 +38,7 @@ final List<Project> projects = [
     creatorImageUrl: 'https://placehold.co/50x50/FF6666/ffffff?text=CT',
   ),
   Project(
+    projectId: '1234',
     title: 'The Daily Loaf Bakery',
     creator: 'Artisan Breads Co.',
     imageUrl: 'https://placehold.co/600x400/FFCC00/000000?text=Bakery',

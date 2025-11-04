@@ -2,50 +2,13 @@ import 'package:drukfunding/create_page.dart';
 import 'package:drukfunding/notification.dart';
 import 'package:flutter/material.dart';
 import 'ProfilePage.dart';
+import 'ProjectDetailPage.dart';
 import 'SearchPage.dart';
 import 'FavouritePage.dart';
 import 'package:drukfunding/model/Project.dart';
 import 'loginPage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Mock Data List
-final List<Project> projects = [
-  Project(
-    title: 'Smart Eco-Garden Kit',
-    creator: 'Green Renovations',
-    imageUrl: 'assets/images/OIP.webp',
-    category: 'Sustainable',
-    raised: 7500,
-    goal: 10000,
-    creatorImageUrl: 'assets/images/OIP.webp',
-  ),
-  Project(
-    title: 'Quest for Aethelgard',
-    creator: 'Pixel Forge',
-    imageUrl: 'assets/images/image2.webp',
-    category: 'Gaming',
-    raised: 28000,
-    goal: 25000,
-    creatorImageUrl: 'assets/images/OIP.webp',
-  ),
-  Project(
-    title: 'EcoWear Apparel Line',
-    creator: 'Conscious Threads',
-    imageUrl: 'assets/images/image3.webp',
-    category: 'Fashion',
-    raised: 12000,
-    goal: 15000,
-    creatorImageUrl: 'assets/images/OIP.webp',
-  ),
-  Project(
-    title: 'The Daily Loaf Bakery',
-    creator: 'Artisan Breads Co.',
-    imageUrl: 'assets/images/image4.webp',
-    category: 'Food',
-    raised: 4000,
-    goal: 8000,
-    creatorImageUrl: 'assets/images/OIP.webp',
-  ),
-];
 
 void main() {
   runApp(const CrowdfundingApp());
@@ -160,16 +123,6 @@ class _HomePageState extends State<HomePage> {
               onSelected: _handleMenuSelection,
               itemBuilder: (BuildContext context) => [
                 const PopupMenuItem(
-                  value: 'profile',
-                  child: Row(
-                    children: [
-                      Icon(Icons.person, color: Colors.blue),
-                      SizedBox(width: 10),
-                      Text('Profile'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
                   value: 'logout',
                   child: Row(
                     children: [
@@ -246,27 +199,86 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class HomeContent extends StatelessWidget {
+class HomeContent extends StatefulWidget {
   const HomeContent({super.key});
 
   @override
+  State<HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<HomeContent> {
+  @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: projects.length,
-      itemBuilder: (context, index) {
-        return ProjectCard(project: projects[index]);
+    // Listen to Firestore "Projects" collection
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('Projects')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return const Center(child: Text('Error loading projects'));
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(
+            child: Text(
+              'No projects available yet.\nCreate one to get started!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+            ),
+          );
+        }
+
+
+        // Convert Firestore documents into Project objects
+        final List<Project> projects = snapshot.data!.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final Timestamp? timestamp = data['createdAt'] as Timestamp?;
+          return Project(
+            projectId: doc.id,
+            title: data['title'] ?? 'Untitled Project',
+            creator: data['creator'] ?? 'Unknown Creator',
+            imageUrl: 'assets/images/OIP.webp',
+            category: data['category'] ?? 'Other',
+            raised: (data['raised'] ?? 0).toDouble(),
+            goal: (data['goal'] ?? 0).toDouble(),
+            creatorImageUrl: data['creatorImageUrl'] ?? 'https://placehold.co/50x50',
+            createdAt: timestamp?.toDate(), // convert Timestamp to DateTime
+          );
+        }).toList();
+
+
+        // Display list of project cards
+        return ListView.builder(
+          padding: const EdgeInsets.all(16.0),
+          itemCount: projects.length,
+          itemBuilder: (context, index) {
+            return ProjectCard(project: projects[index]);
+          },
+        );
       },
     );
   }
 }
 
+
 // --- 3. Project Card Component ---
 
-class ProjectCard extends StatelessWidget {
+class ProjectCard extends StatefulWidget {
   final Project project;
   const ProjectCard({super.key, required this.project});
 
+  @override
+  State<ProjectCard> createState() => _ProjectCardState();
+}
+
+class _ProjectCardState extends State<ProjectCard> {
+  bool isLiked = false;
   // Helper to format currency
   String _formatCurrency(double amount) {
     return 'Nu. ${amount.toStringAsFixed(0)}';
@@ -276,11 +288,13 @@ class ProjectCard extends StatelessWidget {
   Widget _buildCategoryTag() {
     // Determine color based on category
     Color tagColor = Colors.orange;
-    if (project.category == 'Gaming') {
+    if (widget.project.category == 'Gaming') {
       tagColor = Colors.deepOrange;
-    } else if (project.category == 'Sustainable') {
+    } else if (widget.project.category == 'Sustainable') {
       tagColor = Colors.blue[700]!;
     }
+
+
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -289,7 +303,7 @@ class ProjectCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
       ),
       child: Text(
-        project.category,
+        widget.project.category,
         style: const TextStyle(
           color: Colors.white,
           fontSize: 12,
@@ -299,12 +313,49 @@ class ProjectCard extends StatelessWidget {
     );
   }
 
+  Widget _buildLikeTag() {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          isLiked = !isLiked; // Toggle state
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: AnimatedScale(
+          scale: isLiked ? 1.2 : 1.0,
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
+          child: Icon(
+            isLiked ? Icons.favorite : Icons.favorite_border,
+            color: isLiked ? Colors.red : Colors.grey,
+            size: 22,
+          ),
+        )
+      ),
+
+    );
+  }
+
+
   // Helper to build the progress indicator
   Widget _buildProgressBar() {
     // Ensure progress is not capped at 1.0 (for over-funded projects)
-    double progressValue = project.progress.clamp(0.0, 1.0);
+    double progressValue = widget.project.progress.clamp(0.0, 1.0);
     // Determine color for the bar
-    Color barColor = project.progress >= 1.0 ? Colors.green : Colors.orange;
+    Color barColor = widget.project.progress >= 1.0 ? Colors.green : Colors.orange;
 
     return LinearProgressIndicator(
       value: progressValue,
@@ -335,7 +386,7 @@ class ProjectCard extends StatelessWidget {
                 children: [
                   // Project Image
                   Image.asset(
-                    project.imageUrl,
+                    widget.project.imageUrl,
                     fit: BoxFit.cover,
                     height: 200,
                     width: double.infinity,
@@ -362,12 +413,12 @@ class ProjectCard extends StatelessWidget {
                         CircleAvatar(
                           radius: 12,
                           backgroundImage: NetworkImage(
-                            project.creatorImageUrl,
+                            widget.project.creatorImageUrl,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          project.creator,
+                          widget.project.creator,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
@@ -382,7 +433,7 @@ class ProjectCard extends StatelessWidget {
                     bottom: 40,
                     left: 12,
                     child: Text(
-                      project.title,
+                      widget.project.title,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -409,7 +460,7 @@ class ProjectCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _formatCurrency(project.raised),
+                            _formatCurrency(widget.project.raised),
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
@@ -429,7 +480,7 @@ class ProjectCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            _formatCurrency(project.goal),
+                            _formatCurrency(widget.project.goal),
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -453,8 +504,14 @@ class ProjectCard extends StatelessWidget {
                   _buildProgressBar(),
                   const SizedBox(height: 16),
 
-                  // Category Tag
-                  _buildCategoryTag(),
+                  // Category Tag and Like
+                  Row(
+                    children: [
+                      _buildCategoryTag(),
+                      const Spacer(),
+                      _buildLikeTag(),
+                    ],
+                  ),
                   const SizedBox(height: 20),
 
                   // Back Project Button
@@ -462,7 +519,13 @@ class ProjectCard extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        // Action for Back Project
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DetailPage(projectId: widget.project.projectId),
+                          ),
+                        );
+
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue[600],

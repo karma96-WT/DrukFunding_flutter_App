@@ -1,4 +1,5 @@
 class Project {
+  final String projectId;
   final String title;
   final String creator;
   final String imageUrl;
@@ -6,8 +7,10 @@ class Project {
   final double raised;
   final double goal;
   final String creatorImageUrl;
+  final DateTime? createdAt; // add this field
 
   Project({
+    required this.projectId,
     required this.title,
     required this.creator,
     required this.imageUrl,
@@ -15,8 +18,8 @@ class Project {
     required this.raised,
     required this.goal,
     required this.creatorImageUrl,
+    this.createdAt, // optional
   });
 
-  // Calculate percentage of goal achieved
   double get progress => raised / goal;
 }

@@ -8,6 +8,7 @@ import 'FavouritePage.dart';
 import 'package:drukfunding/model/Project.dart';
 import 'loginPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 
 void main() {
@@ -159,6 +160,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+
   // Builds the Bottom Navigation Bar
   Widget _buildBottomNavBar() {
     return BottomNavigationBar(
@@ -175,9 +177,10 @@ class _HomePageState extends State<HomePage> {
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
         BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Create'),
+        // 🔑 Updated icon and label for "Saved"
         BottomNavigationBarItem(
-          icon: Icon(Icons.favorite_border),
-          label: 'Favourite',
+          icon: Icon(Icons.save),
+          label: 'Saved',
         ),
 
         BottomNavigationBarItem(
@@ -243,9 +246,11 @@ class _HomeContentState extends State<HomeContent> {
             projectId: doc.id,
             title: data['title'] ?? 'Untitled Project',
             creator: data['creator'] ?? 'Unknown Creator',
-            imageUrl: 'assets/images/OIP.webp',
+            imageUrl: data['imageUrl'],
             category: data['category'] ?? 'Other',
             raised: (data['raised'] ?? 0).toDouble(),
+            // Keeping 'likes' here, but it will no longer be updated by the save function.
+            likes: (data['likes'] as num?)?.toInt() ?? 0,
             goal: (data['goal'] ?? 0).toDouble(),
             creatorImageUrl: data['creatorImageUrl'] ?? 'https://placehold.co/50x50',
             createdAt: timestamp?.toDate(), // convert Timestamp to DateTime
@@ -271,14 +276,101 @@ class _HomeContentState extends State<HomeContent> {
 
 class ProjectCard extends StatefulWidget {
   final Project project;
-  const ProjectCard({super.key, required this.project});
+  const ProjectCard({super.key, required final this.project});
 
   @override
   State<ProjectCard> createState() => _ProjectCardState();
 }
 
 class _ProjectCardState extends State<ProjectCard> {
-  bool isLiked = false;
+  // 🔑 Renamed from isLiked to isSaved for clarity
+  bool isSaved = false;
+
+  // --- Favorites/Saved System Logic ---
+
+  @override
+  void initState() {
+    super.initState();
+    // 🔑 Check for the initial save status from Firestore
+    _checkInitialSaveStatus();
+  }
+
+  // 1. Check if the current user has saved this project (runs once on load)
+  void _checkInitialSaveStatus() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    // Cannot check if user is not logged in
+    if (userId == null) return;
+
+    // Look for the tracking document in the new collection: user_saved/{userId}_{projectId}
+    final docId = '${userId}_${widget.project.projectId}';
+    final docSnapshot = await FirebaseFirestore.instance
+        .collection('user_saved') // 🔑 New collection name
+        .doc(docId)
+        .get();
+
+    // Set the initial state based on the document's existence
+    if (mounted) {
+      setState(() {
+        isSaved = docSnapshot.exists;
+      });
+    }
+  }
+
+
+  // 2. Atomic function to handle the FAVORITES ARRAY and the TRACKING DOCUMENT
+  // 🔑 Implements the logic to create the two new collections and insert data
+  Future<void> updateProjectSaved({
+    required String projectId,
+    required int incrementValue, // Use 1 for save, -1 for unsave
+  }) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      throw Exception('User is not authenticated. Cannot save project.');
+    }
+
+    // Reference to the user's FAVORITES document (Favorites/{userId})
+    final userFavoritesRef = FirebaseFirestore.instance.collection('Favorites').doc(userId);
+
+    // Reference to the user's save TRACKING document (user_saved/{userId_projectId})
+    final docId = '${userId}_$projectId';
+    final userSaveTrackingRef = FirebaseFirestore.instance.collection('user_saved').doc(docId);
+
+
+    try {
+      if (incrementValue == 1) {
+        // --- Action: Save Project (Creates collections if they don't exist) ---
+
+        // 1. Add the projectId to the 'projects' array in the Favorites/{userId} document.
+        await userFavoritesRef.set({
+          // 'projects' array will be created if the document is new
+          'projects': FieldValue.arrayUnion([projectId]),
+          'lastSavedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true)); // `merge: true` is crucial for creating the document if it's new
+
+        // 2. Create the tracking document in 'user_saved'. This also creates the collection.
+        await userSaveTrackingRef.set({
+          'savedAt': FieldValue.serverTimestamp(),
+          'userId': userId,
+          'projectId': projectId,
+        });
+
+      } else if (incrementValue == -1) {
+        // --- Action: Unsave Project ---
+
+        // 1. Remove the projectId from the 'projects' array.
+        await userFavoritesRef.update({
+          'projects': FieldValue.arrayRemove([projectId]),
+        });
+
+        // 2. Delete the tracking document.
+        await userSaveTrackingRef.delete();
+      }
+    } catch (e) {
+      print('FIREBASE SAVE/UNSAVE FAILED! Error: $e');
+      rethrow;
+    }
+  }
+
   // Helper to format currency
   String _formatCurrency(double amount) {
     return 'Nu. ${amount.toStringAsFixed(0)}';
@@ -293,8 +385,6 @@ class _ProjectCardState extends State<ProjectCard> {
     } else if (widget.project.category == 'Sustainable') {
       tagColor = Colors.blue[700]!;
     }
-
-
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -313,39 +403,79 @@ class _ProjectCardState extends State<ProjectCard> {
     );
   }
 
-  Widget _buildLikeTag() {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          isLiked = !isLiked; // Toggle state
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: AnimatedScale(
-          scale: isLiked ? 1.2 : 1.0,
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
-          child: Icon(
-            isLiked ? Icons.favorite : Icons.favorite_border,
-            color: isLiked ? Colors.red : Colors.grey,
-            size: 22,
-          ),
-        )
-      ),
 
+  // 🔑 Renamed to _buildSaveTag and updated logic/icons
+  Widget _buildSaveTag()  {
+    return GestureDetector(
+      onTap: () async {
+        // 0. Check for user authentication immediately
+        if (FirebaseAuth.instance.currentUser == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please log in to save a project.')),
+          );
+          return;
+        }
+
+        final bool intendedIsSaved = !isSaved;
+        final int incrementValue = intendedIsSaved ? 1 : -1;
+
+        // 1. Optimistically update local UI state
+        setState(() {
+          isSaved = intendedIsSaved;
+        });
+
+        try {
+          // 2. Await the asynchronous Firebase update
+          await updateProjectSaved(
+            projectId: widget.project.projectId,
+            incrementValue: incrementValue,
+          );
+
+        } catch (e) {
+          // 3. FAILURE: LOG THE ERROR and REVERT UI STATE
+          print('FIREBASE UPDATE FAILED! Error: $e'); // ⬅️ CHECK YOUR CONSOLE FOR THIS MESSAGE
+          if (mounted) {
+            setState(() {
+              isSaved = !intendedIsSaved; // Revert the toggle
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to update save status. $e')),
+            );
+          }
+        }
+      },
+
+      // The child is now correctly placed as a property of GestureDetector
+      child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              AnimatedScale(
+                scale: isSaved ? 1.2 : 1.0,
+                duration: const Duration(milliseconds: 150),
+                curve: Curves.easeOut,
+                child: Icon(
+                  // 🔑 Updated icons and color for the 'Saved' state
+                  isSaved ? Icons.bookmark : Icons.bookmark_border,
+                  color: isSaved ? Colors.green[600] : Colors.grey,
+                  size: 22,
+                ),
+              ),
+            ],
+          )
+      ),
     );
   }
 
@@ -385,11 +515,23 @@ class _ProjectCardState extends State<ProjectCard> {
                 alignment: Alignment.bottomLeft,
                 children: [
                   // Project Image
-                  Image.asset(
+                  Image.network(
                     widget.project.imageUrl,
                     fit: BoxFit.cover,
                     height: 200,
                     width: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 200,
+                        color: Colors.grey[300],
+                        child: const Center(
+                          child: Text(
+                            'Image Failed to Load',
+                            style: TextStyle(color: Colors.black54),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   // Gradient Overlay for readability (optional, but good practice)
                   Container(
@@ -504,12 +646,12 @@ class _ProjectCardState extends State<ProjectCard> {
                   _buildProgressBar(),
                   const SizedBox(height: 16),
 
-                  // Category Tag and Like
+                  // Category Tag and Save
                   Row(
                     children: [
                       _buildCategoryTag(),
                       const Spacer(),
-                      _buildLikeTag(),
+                      _buildSaveTag(), // 🔑 Calling the new Save Tag widget
                     ],
                   ),
                   const SizedBox(height: 20),

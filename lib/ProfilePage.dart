@@ -24,6 +24,7 @@ final List<Project> createdProjects = [
     imageUrl: 'https://placehold.co/600x400/1B4D3E/FFFFFF?text=Eco+Garden',
     category: 'Sustainable',
     raised: 7500,
+    likes: 9,
     goal: 10000,
     creatorImageUrl: mockUser['profileImageUrl'],
   ),
@@ -34,6 +35,7 @@ final List<Project> createdProjects = [
     imageUrl: 'https://placehold.co/600x400/7F8C8D/FFFFFF?text=Backpack',
     category: 'Fashion',
     raised: 15000,
+    likes: 8,
     goal: 12000, // Goal exceeded
     creatorImageUrl: mockUser['profileImageUrl'],
   ),
@@ -48,6 +50,7 @@ final List<Project> backedProjects = [
     imageUrl: 'https://placehold.co/600x400/F39C12/FFFFFF?text=Quantum',
     category: 'Technology',
     raised: 90000,
+    likes: 7,
     goal: 100000,
     creatorImageUrl: 'https://placehold.co/50x50/e74c3c/FFFFFF?text=TG',
   ),
@@ -58,6 +61,7 @@ final List<Project> backedProjects = [
     imageUrl: 'https://placehold.co/600x400/D35400/FFFFFF?text=Bakery',
     category: 'Food',
     raised: 4000,
+    likes: 78,
     goal: 8000,
     creatorImageUrl: 'https://placehold.co/50x50/f1c40f/FFFFFF?text=AB',
   ),
@@ -71,6 +75,7 @@ class ProjectCard extends StatelessWidget {
   final bool isBacked;
 
   ProjectCard({super.key, required this.project, this.isBacked = false});
+
 
   @override
   Widget build(BuildContext context) {

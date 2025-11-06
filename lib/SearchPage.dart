@@ -1,52 +1,8 @@
+import 'package:drukfunding/ProjectDetailPage.dart';
 import 'package:flutter/material.dart';
-import 'package:drukfunding/model/project.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:drukfunding/model/Project.dart';
 
-// --- MOCK DATA FOR SEARCH PAGE ---
-final List<Project> allProjects = [
-  Project(
-    projectId: 'dummyId231',
-    title: 'Smart Eco-Garden Kit',
-    creator: 'Green Renovations',
-    imageUrl: 'https://placehold.co/600x400/1B4D3E/FFFFFF?text=Eco+Garden',
-    category: 'Sustainable',
-    raised: 7500,
-    goal: 10000,
-    creatorImageUrl: 'https://placehold.co/50x50/3498db/FFFFFF?text=GR',
-  ),
-  Project(
-    projectId: 'dummyId1',
-    title: 'Quest for Aethelgard: The RPG',
-    creator: 'Pixel Forge',
-    imageUrl: 'https://placehold.co/600x400/8E44AD/FFFFFF?text=Fantasy+Game',
-    category: 'Gaming',
-    raised: 28000,
-    goal: 25000,
-    creatorImageUrl: 'https://placehold.co/50x50/e74c3c/FFFFFF?text=PF',
-  ),
-  Project(
-    projectId: 'dummy23434444Id1',
-    title: 'EcoWear Apparel Line',
-    creator: 'Conscious Threads',
-    imageUrl: 'https://placehold.co/600x400/2C3E50/FFFFFF?text=Eco+Wear',
-    category: 'Fashion',
-    raised: 12000,
-    goal: 15000,
-    creatorImageUrl: 'https://placehold.co/50x50/2ecc71/FFFFFF?text=CT',
-  ),
-  Project(
-    projectId: 'dummy4332Id1',
-    title: 'The Daily Loaf Bakery',
-    creator: 'Artisan Breads Co.',
-    imageUrl: 'https://placehold.co/600x400/D35400/FFFFFF?text=Bakery',
-    category: 'Food',
-    raised: 4000,
-    goal: 8000,
-    creatorImageUrl: 'https://placehold.co/50x50/f1c40f/FFFFFF?text=AB',
-  ),
-];
-
-// PROJECT CARD WIDGET
 class ProjectCard extends StatefulWidget {
   final Project project;
   const ProjectCard({super.key, required this.project});
@@ -90,8 +46,9 @@ class _ProjectCardState extends State<ProjectCard> {
   }
 
   Widget _buildProgressBar() {
-    double progressValue = widget.project.progress.clamp(0.0, 1.0);
-    Color barColor = widget.project.progress >= 1.0 ? Colors.green : Colors.orange;
+    // Uses the computed progress getter from the Project model
+    double progressValue = widget.project.progress;
+    Color barColor = progressValue >= 1.0 ? Colors.green : Colors.orange;
 
     return LinearProgressIndicator(
       value: progressValue,
@@ -112,6 +69,7 @@ class _ProjectCardState extends State<ProjectCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // --- Image and Creator Stack ---
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(16),
@@ -187,6 +145,7 @@ class _ProjectCardState extends State<ProjectCard> {
                 ],
               ),
             ),
+            // --- Stats, Progress, and Button ---
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -246,7 +205,15 @@ class _ProjectCardState extends State<ProjectCard> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        String currentProjectId = widget.project.projectId;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DetailPage(projectId: currentProjectId),
+                          ),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue[600],
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -274,7 +241,6 @@ class _ProjectCardState extends State<ProjectCard> {
   }
 }
 
-// --- FUNCTIONAL SEARCH PAGE ---
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -284,55 +250,79 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  // Controller to manage the text field input
   final TextEditingController _searchController = TextEditingController();
+  final CollectionReference projectsCollection =
+  FirebaseFirestore.instance.collection('Projects');
 
-  // firebase instance
-  final CollectionReference projectsCollection = FirebaseFirestore.instance.collection('projects');
-
-  // List to hold the current filtered search results
-  List<Project> _filteredProjects = allProjects;
+  List<Project> _allLiveProjects = [];
+  List<Project> _filteredProjects = [];
 
   @override
   void initState() {
     super.initState();
-    // Initialize the filtered list to show all projects when the page loads
-    _filteredProjects = allProjects;
+    _filteredProjects = [];
+    // Listen to the text controller to trigger filtering on every change
+    _searchController.addListener(_onSearchChanged);
   }
 
-  // Function to perform the search/filtering
-  void _filterProjects(String query) {
-    // Convert query to lower case for case-insensitive matching
-    final lowerCaseQuery = query.toLowerCase();
+  void _onSearchChanged() {
+    // Calls filterProjects whenever text changes
+    _filterProjects(_searchController.text);
+    // Forces a widget rebuild to correctly show/hide the clear button in the AppBar
+    setState(() {});
+  }
 
-    setState(() {
-      if (lowerCaseQuery.isEmpty) {
-        // If the query is empty, show all projects
-        _filteredProjects = allProjects;
-      } else {
-        // Filter the list based on title or creator containing the query
-        _filteredProjects = allProjects.where((project) {
-          return project.title.toLowerCase().contains(lowerCaseQuery) ||
-              project.creator.toLowerCase().contains(lowerCaseQuery) ||
-              project.category.toLowerCase().contains(lowerCaseQuery);
-        }).toList();
-      }
-    });
+  void _filterProjects(String query) {
+    final lowerCaseQuery = query.toLowerCase();
+    final List<Project> newFilteredList;
+
+    if (lowerCaseQuery.isEmpty) {
+      // If the query is empty, show all live projects
+      newFilteredList = _allLiveProjects;
+    } else {
+      // Filter the in-memory list
+      newFilteredList = _allLiveProjects.where((project) {
+        return project.title.toLowerCase().contains(lowerCaseQuery) ||
+            project.creator.toLowerCase().contains(lowerCaseQuery) ||
+            project.category.toLowerCase().contains(lowerCaseQuery);
+      }).toList();
+    }
+
+    // Only update state if the visible list has actually changed
+    if (_filteredProjects.length != newFilteredList.length ||
+        !_listEquals(_filteredProjects, newFilteredList)) {
+      setState(() {
+        _filteredProjects = newFilteredList;
+      });
+    }
+  }
+
+  // Helper to compare two lists of Projects by ID (basic check)
+  bool _listEquals(List<Project> a, List<Project> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].projectId != b[i].projectId) return false;
+    }
+    return true;
   }
 
   // Function to clear the search field and reset results
   void _clearSearch() {
-    setState(() {
-      _searchController.clear();
-      _filteredProjects = allProjects;
-    });
+    // Clearing the controller triggers the listener, which handles the reset
+    _searchController.clear();
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // Set the title widget to a functional search bar
         title: Container(
           width: double.infinity,
           height: 40,
@@ -348,39 +338,70 @@ class _SearchPageState extends State<SearchPage> {
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.only(left: 8.0, right: 4.0),
             child: TextField(
               controller: _searchController,
-              autofocus: true, // Focus on search bar immediately
+              autofocus: true,
               decoration: InputDecoration(
                 hintText: 'Search projects, creators, or categories...',
                 border: InputBorder.none,
                 prefixIcon: const Icon(Icons.search, color: Colors.blue),
-                // Show a clear button only when text is present
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.grey),
-                        onPressed: _clearSearch,
-                      )
+                  icon: const Icon(Icons.clear, color: Colors.grey),
+                  onPressed: _clearSearch,
+                )
                     : null,
                 contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
               ),
-              // Call filter function whenever the text changes
-              onChanged: _filterProjects,
             ),
           ),
         ),
         titleSpacing: 0,
         backgroundColor: Colors.blue,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: _buildSearchBody(),
+      // Use StreamBuilder to handle asynchronous Firebase data
+      body: StreamBuilder<QuerySnapshot<Project>>(
+        stream: projectsCollection
+            .withConverter<Project>(
+          fromFirestore: (snapshot, _) => Project.fromFirestore(snapshot),
+          toFirestore: (project, _) => {},
+        )
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final List<Project> fetchedProjects =
+              snapshot.data?.docs.map((doc) => doc.data()).toList() ?? [];
+
+          // Core Logic: Update source list and re-filter
+          if (_allLiveProjects.length != fetchedProjects.length ||
+              !_listEquals(_allLiveProjects, fetchedProjects)) {
+
+            _allLiveProjects = fetchedProjects;
+
+            // Re-run the filter on the new data after the frame is built
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _filterProjects(_searchController.text);
+            });
+          }
+
+          return _buildSearchBody(context);
+        },
+      ),
     );
   }
 
-  // Separate method to build the main body content
-  Widget _buildSearchBody() {
+  Widget _buildSearchBody(BuildContext context) {
+    // Case 1: Search performed but no results found
     if (_searchController.text.isNotEmpty && _filteredProjects.isEmpty) {
-      // Case 1: Search performed but no results found
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
@@ -406,9 +427,10 @@ class _SearchPageState extends State<SearchPage> {
           ),
         ),
       );
-    } else if (_searchController.text.isEmpty && _filteredProjects.isEmpty) {
-      // Case 2: Should not happen with initial setup, but good for safety
-      return const Center(child: Text('Start searching to find projects!'));
+    }
+    // Case 2: No data fetched yet AND no projects available
+    else if (_filteredProjects.isEmpty && _searchController.text.isEmpty && _allLiveProjects.isEmpty) {
+      return const Center(child: Text('No projects available yet!'));
     }
 
     // Case 3: Display results (either filtered or all projects)

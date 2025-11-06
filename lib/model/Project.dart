@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Project {
@@ -30,8 +28,12 @@ class Project {
   double get progress => raised / goal;
 
   factory Project.fromFirestore(
-      DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data()!;
+      DocumentSnapshot<Map<String, dynamic>> doc, // <-- Change the type here
+      SnapshotOptions? options,
+      ) {
+    final data = doc.data()!; // Using the non-nullable operator assumes doc exists,
+
+    // The rest of your logic remains the same:
     return Project(
       projectId: doc.id,
       title: data['title'] ?? 'Untitled Project',

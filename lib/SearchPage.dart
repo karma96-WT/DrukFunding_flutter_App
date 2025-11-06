@@ -365,7 +365,7 @@ class _SearchPageState extends State<SearchPage> {
       body: StreamBuilder<QuerySnapshot<Project>>(
         stream: projectsCollection
             .withConverter<Project>(
-          fromFirestore: (snapshot, _) => Project.fromFirestore(snapshot),
+          fromFirestore: (doc, options) => Project.fromFirestore(doc,options),
           toFirestore: (project, _) => {},
         )
             .snapshots(),

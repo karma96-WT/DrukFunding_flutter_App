@@ -1,5 +1,6 @@
 import 'package:drukfunding/create_page.dart';
 import 'package:drukfunding/notification.dart';
+import 'package:drukfunding/pledgePage.dart';
 import 'package:flutter/material.dart';
 import 'ProfilePage.dart';
 import 'ProjectDetailPage.dart';
@@ -283,15 +284,12 @@ class ProjectCard extends StatefulWidget {
 }
 
 class _ProjectCardState extends State<ProjectCard> {
-  // 🔑 Renamed from isLiked to isSaved for clarity
   bool isSaved = false;
 
-  // --- Favorites/Saved System Logic ---
 
   @override
   void initState() {
     super.initState();
-    // 🔑 Check for the initial save status from Firestore
     _checkInitialSaveStatus();
   }
 
@@ -500,10 +498,21 @@ class _ProjectCardState extends State<ProjectCard> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
+      child: InkWell(
+        onTap:() {
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DetailPage(projectId: widget.project.projectId),
+            ),
+          );
+        },
       child: Card(
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Column(
+
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // --- Image Section with Overlay ---
@@ -664,7 +673,7 @@ class _ProjectCardState extends State<ProjectCard> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => DetailPage(projectId: widget.project.projectId),
+                            builder: (context) => PledgePage(projectId: widget.project.projectId),
                           ),
                         );
 
@@ -692,6 +701,7 @@ class _ProjectCardState extends State<ProjectCard> {
           ],
         ),
       ),
+      )
     );
   }
 }

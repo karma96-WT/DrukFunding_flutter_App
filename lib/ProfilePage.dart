@@ -2,8 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-// --- MOCK DATA STRUCTURES FOR PROFILE PAGE ---
 import 'package:drukfunding/model/project.dart';
+
+import 'ProjectDetailPage.dart';
 
 
 // Mock User Profile Data (Kept for stat cards and fallback)
@@ -85,7 +86,16 @@ class ProjectCard extends StatelessWidget {
         ? 'Goal Met!'
         : '${(project.progress * 100).toStringAsFixed(0)}% Funded';
 
-    return Card(
+    return InkWell(
+      onTap: (){
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailPage(projectId: project.projectId),
+          ),
+        );
+      },
+        child: Card(
       margin: const EdgeInsets.only(bottom: 16.0),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -127,8 +137,15 @@ class ProjectCard extends StatelessWidget {
         onTap: () {
           // Placeholder for navigation to project details page
           print('Tapped on ${project.title}');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DetailPage(projectId: project.projectId),
+            ),
+          );
         },
       ),
+        )
     );
   }
 }
@@ -145,9 +162,14 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
 
+  int _createdCount = 0;
+
   late TabController _tabController;
   final String? userId = FirebaseAuth.instance.currentUser?.uid;
   Future<DocumentSnapshot<Map<String, dynamic>>>? _userProfileFuture;
+
+  // 1. NEW: Future to hold the created projects data fetched from Firebase
+  Future<List<Project>>? _createdProjectsFuture;
 
   @override
   void initState() {
@@ -160,6 +182,9 @@ class _ProfilePageState extends State<ProfilePage>
           .collection('users')
           .doc(userId)
           .get();
+
+      // 2. NEW: Initialize the Future call for created projects
+      _createdProjectsFuture = _getCreatedProjects();
     }
   }
 
@@ -167,6 +192,32 @@ class _ProfilePageState extends State<ProfilePage>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  // 3. NEW: Function to fetch projects created by the current user
+  Future<List<Project>> _getCreatedProjects() async {
+    if (userId == null) {
+      return [];
+    }
+
+    try {
+      // Query the 'Projects' collection where 'creatorId' field matches the current userId
+      QuerySnapshot<Map<String, dynamic>> snapshot = await FirebaseFirestore.instance
+          .collection('Projects')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      // Map the document snapshots to a list of Project objects
+      return snapshot.docs.map((doc) {
+        // ASSUMPTION: Project.fromFirestore is implemented in your Project model
+        return Project.fromFirestore(doc, null);
+      }).toList();
+
+    } catch (e) {
+      print("Error fetching created projects: $e");
+      // Return an empty list on error
+      return [];
+    }
   }
 
   // Widget to display user statistics in a card format (kept as requested)
@@ -203,6 +254,43 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
+  // 4. NEW: Widget to handle the Future for the "My Creations" tab content
+  Widget _buildCreatedProjectsTab() {
+    // If user is not logged in or Future wasn't initialized
+    if (_createdProjectsFuture == null) {
+      // This case is covered by the check in the main build method, but acts as a fallback
+      return const Center(child: Text('User not authenticated.'));
+    }
+
+    return FutureBuilder<List<Project>>(
+      future: _createdProjectsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error loading creations: ${snapshot.error}'));
+        }
+
+        // Use the fetched list if available, otherwise an empty list
+        final List<Project> userCreations = snapshot.data ?? [];
+
+        final int newCount = userCreations.length;
+        if (newCount != _createdCount) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {
+              _createdCount = newCount;
+            });
+          });
+        }
+
+        // Call the general list builder with the fetched data
+        return _buildProjectList(userCreations, isBacked: false);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (userId == null || _userProfileFuture == null) {
@@ -211,12 +299,8 @@ class _ProfilePageState extends State<ProfilePage>
       );
     }
 
-    // Wrap the content in FutureBuilder to fetch and display data
+    // Main FutureBuilder for Profile Header Data
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Profile'),
-        backgroundColor: Colors.blue,
-      ),
       body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         future: _userProfileFuture,
         builder: (context, snapshot) {
@@ -232,17 +316,15 @@ class _ProfilePageState extends State<ProfilePage>
             return const Center(child: Text('Profile data not found.'));
           }
 
-          // --- Data Extraction ---
+          // --- Data Extraction for Header ---
           final realUserData = snapshot.data!.data()!;
-          // Use username from Firestore (or mock name as fallback if data is null)
           final realName = realUserData['username'] ?? mockUser['name'];
-          // Use email from Firestore (or mock email as fallback if data is null)
           final realEmail = realUserData['email'] ?? mockUser['email'];
           final profileImage = realUserData['profileImageUrl'] ?? mockUser['profileImageUrl'];
 
           return Column(
             children: [
-              // 1. User Header Section (Using REAL Name and Email)
+              // 1. User Header Section (Profile Image, Name, Email, Stat Cards)
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24.0,
@@ -257,7 +339,7 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      realName, // 👈 DISPLAY REAL NAME/USERNAME
+                      realName,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -265,17 +347,17 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      realEmail, // 👈 DISPLAY REAL EMAIL
+                      realEmail,
                       style: const TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                     const SizedBox(height: 8),
-                    // Stat Cards Row (Kept as requested, still using mock data)
+                    // Stat Cards Row (Still using mock data)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         _buildStatCard(
                           label: 'Created',
-                          value: mockUser['totalProjectsCreated'].toString(),
+                          value: _createdCount.toString(),
                           icon: Icons.lightbulb_outline,
                         ),
                         _buildStatCard(
@@ -306,10 +388,10 @@ class _ProfilePageState extends State<ProfilePage>
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    // Tab 1: Created Projects (Still using mock data)
-                    _buildProjectList(createdProjects, isBacked: false),
+                    // Tab 1: Created Projects (NOW DYNAMIC)
+                    _buildCreatedProjectsTab(),
 
-                    // Tab 2: Backed Projects (Still using mock data)
+                    // Tab 2: Backed Projects (STILL USING MOCK DATA)
                     _buildProjectList(backedProjects, isBacked: true),
                   ],
                 ),
@@ -325,6 +407,10 @@ class _ProfilePageState extends State<ProfilePage>
   Widget _buildProjectList(List<Project> projects, {required bool isBacked}) {
     if (projects.isEmpty) {
       return Center(
+        child: InkWell(
+          onTap: (){
+
+          },
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -344,6 +430,7 @@ class _ProfilePageState extends State<ProfilePage>
             ),
           ],
         ),
+        )
       );
     }
 

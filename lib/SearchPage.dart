@@ -1,4 +1,5 @@
 import 'package:drukfunding/ProjectDetailPage.dart';
+import 'package:drukfunding/pledgePage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:drukfunding/model/Project.dart';
@@ -63,6 +64,15 @@ class _ProjectCardState extends State<ProjectCard> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
+      child : InkWell(
+        onTap: (){
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PledgePage(projectId: widget.project.projectId),
+            ),
+          );
+        },
       child: Card(
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -237,6 +247,7 @@ class _ProjectCardState extends State<ProjectCard> {
           ],
         ),
       ),
+      )
     );
   }
 }

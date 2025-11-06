@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart'; // Needed for FirestoreServic
 import 'package:flutter/material.dart';
 import 'package:drukfunding/model/Project.dart';
 
+import 'ProjectDetailPage.dart';
+
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -19,7 +21,7 @@ class FirestoreService {
 
     final data = favoriteDoc.data() as Map<String, dynamic>?;
     final List<String> savedProjectIds =
-        (data?['savedProjectIds'] as List<dynamic>?)
+        (data?['projects'] as List<dynamic>?)
             ?.map((id) => id.toString())
             .toList() ?? [];
     if (savedProjectIds.isEmpty) return [];
@@ -61,9 +63,12 @@ class _FavoriteProjectCardState extends State<FavoriteProjectCard> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: InkWell(
         onTap: () {
-          ScaffoldMessenger.of(
+          Navigator.push(
             context,
-          ).showSnackBar(SnackBar(content: Text('Tapped on ${widget.project.title}')));
+            MaterialPageRoute(
+              builder: (context) => DetailPage(projectId: widget.project.projectId),
+            ),
+          );
         },
         borderRadius: BorderRadius.circular(15),
         child: Column(
@@ -111,8 +116,8 @@ class _FavoriteProjectCardState extends State<FavoriteProjectCard> {
                       ),
                       // Simulate the "Unfavorite" button
                       Icon(
-                        Icons.favorite,
-                        color: Colors.pink.shade400,
+                        Icons.save,
+                        color: Colors.green,
                         size: 24,
                       ),
                     ],
@@ -168,7 +173,6 @@ class _FavoriteProjectCardState extends State<FavoriteProjectCard> {
 }
 
 
-// --- FAVORITE PAGE IMPLEMENTATION (Uses FutureBuilder) ---
 
 class FavouritePage extends StatefulWidget {
   const FavouritePage({super.key});
@@ -182,6 +186,8 @@ class _FavouritePageState extends State<FavouritePage> {
   final FirestoreService _firestoreService = FirestoreService();
   late Future<List<Project>> _favoriteProjectsFuture;
 
+  int _projectCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -193,14 +199,20 @@ class _FavouritePageState extends State<FavouritePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Center(
-          child: Text(
-            'Saved Projects',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+        title: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Saved Projects ',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Text('($_projectCount)',style: const TextStyle(color: Colors.white),)
+            ],
           ),
         ),
         backgroundColor: Colors.pink.shade400,
@@ -215,13 +227,30 @@ class _FavouritePageState extends State<FavouritePage> {
             return const Center(child: CircularProgressIndicator());
           }
 
+          // C. Data Available State
+          final List<Project> favoriteProjects = snapshot.data ?? [];
+          final int newCount = favoriteProjects.length;
+
+          // 3. UPDATE STATE AFTER DATA LOADS
+          // This updates the _projectCount variable and rebuilds the AppBar
+          if (newCount != _projectCount) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              setState(() {
+                _projectCount = newCount;
+              });
+            });
+          }
+
+          // D. Empty State
+          if (newCount == 0) {
+            return Center(
+            );
+          }
+
           // B. Error State
           if (snapshot.hasError) {
             return Center(child: Text('Error loading favorites: ${snapshot.error}'));
           }
-
-          // C. Data Available State
-          final List<Project> favoriteProjects = snapshot.data ?? [];
 
           // D. Empty State (no favorites found or user not logged in)
           if (favoriteProjects.isEmpty) {

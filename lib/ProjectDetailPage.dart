@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:drukfunding/pledgePage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'ProfilePage.dart';
 
 class DetailPage extends StatefulWidget {
   final String projectId; // Firestore document ID
@@ -28,7 +30,12 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   void _onSubmit(){
-    // Logic goes here
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PledgePage(projectId: widget.projectId),
+      ),
+    );
   }
 
   @override
@@ -213,8 +220,7 @@ class _DetailPageState extends State<DetailPage> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: ()=> {
-
-                      _onSubmit,
+                      _onSubmit(),
                       },
                       child: const Text('Back Project'),
                       style: ElevatedButton.styleFrom(

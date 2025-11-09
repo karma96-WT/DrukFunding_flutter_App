@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:drukfunding/model/project.dart';
 
 import 'ProjectDetailPage.dart';
+import 'backing_details.dart';
+import 'creators_analytics.dart';
 
 
 // Mock User Profile Data (Kept for stat cards and fallback)
@@ -16,66 +18,13 @@ final Map<String, dynamic> mockUser = {
   'totalProjectsBacked': 5,
 };
 
-// Mock Created Projects (Kept as requested)
-final List<Project> createdProjects = [
-  Project(
-    projectId: 'wewfer',
-    title: 'Smart Eco-Garden Kit',
-    creator: 'Alex Thompson',
-    imageUrl: 'https://placehold.co/600x400/1B4D3E/FFFFFF?text=Eco+Garden',
-    category: 'Sustainable',
-    raised: 7500,
-    likes: 9,
-    goal: 10000,
-    creatorImageUrl: mockUser['profileImageUrl'],
-  ),
-  Project(
-    projectId: 'wewferrr',
-    title: 'Minimalist Travel Backpack',
-    creator: 'Alex Thompson',
-    imageUrl: 'https://placehold.co/600x400/7F8C8D/FFFFFF?text=Backpack',
-    category: 'Fashion',
-    raised: 15000,
-    likes: 8,
-    goal: 12000, // Goal exceeded
-    creatorImageUrl: mockUser['profileImageUrl'],
-  ),
-];
-
-// Mock Backed Projects (Kept as requested)
-final List<Project> backedProjects = [
-  Project(
-    projectId: 'wewfeeer',
-    title: 'Quantum Computing Handbook',
-    creator: 'Tech Gurus',
-    imageUrl: 'https://placehold.co/600x400/F39C12/FFFFFF?text=Quantum',
-    category: 'Technology',
-    raised: 90000,
-    likes: 7,
-    goal: 100000,
-    creatorImageUrl: 'https://placehold.co/50x50/e74c3c/FFFFFF?text=TG',
-  ),
-  Project(
-    projectId: 'wewferddddd',
-    title: 'Local Farm-to-Table Cafe',
-    creator: 'The Daily Loaf Bakery',
-    imageUrl: 'https://placehold.co/600x400/D35400/FFFFFF?text=Bakery',
-    category: 'Food',
-    raised: 4000,
-    likes: 78,
-    goal: 8000,
-    creatorImageUrl: 'https://placehold.co/50x50/f1c40f/FFFFFF?text=AB',
-  ),
-  // Add more backed projects here...
-];
-
-// --- REUSABLE PROJECT CARD WIDGET (Simplified for list display) ---
-// NOTE: Removed extraneous initState/Future properties from StatelessWidget
+// --- REUSABLE PROJECT CARD WIDGET (FIXED onTap structure) ---
 class ProjectCard extends StatelessWidget {
   final Project project;
   final bool isBacked;
+  final VoidCallback onTap;
 
-  ProjectCard({super.key, required this.project, this.isBacked = false});
+  ProjectCard({super.key, required this.project, this.isBacked = false, required this.onTap});
 
 
   @override
@@ -87,65 +36,48 @@ class ProjectCard extends StatelessWidget {
         : '${(project.progress * 100).toStringAsFixed(0)}% Funded';
 
     return InkWell(
-      onTap: (){
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetailPage(projectId: project.projectId),
+      onTap: onTap, // ⭐ THE CRITICAL FIX: Directly use the onTap callback passed from the parent widget
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 16.0),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: Colors.blue.shade100,
+            child: Icon(
+              isBacked ? Icons.favorite_border : Icons.star_border,
+              color: Colors.blue,
+            ),
           ),
-        );
-      },
-        child: Card(
-      margin: const EdgeInsets.only(bottom: 16.0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.blue.shade100,
-          child: Icon(
-            isBacked ? Icons.favorite_border : Icons.star_border,
-            color: Colors.blue,
+          title: Text(
+            project.title,
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-        ),
-        title: Text(
-          project.title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Goal: Nu. ${project.goal.toStringAsFixed(0)}'),
-            Text(
-              'Status: $statusText',
-              style: TextStyle(
-                color: statusColor,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Goal: Nu. ${project.goal.toStringAsFixed(0)}'),
+              Text(
+                'Status: $statusText',
+                style: TextStyle(
+                  color: statusColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
               ),
-            ),
-          ],
-        ),
-        trailing: isBacked
-            ? Text(
-          'Backed!',
-          style: TextStyle(
-            color: Colors.pink.shade700,
-            fontWeight: FontWeight.bold,
+            ],
           ),
-        )
-            : const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-        onTap: () {
-          // Placeholder for navigation to project details page
-          print('Tapped on ${project.title}');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => DetailPage(projectId: project.projectId),
+          trailing: isBacked
+              ? Text(
+            'Backed!',
+            style: TextStyle(
+              color: Colors.pink.shade700,
+              fontWeight: FontWeight.bold,
             ),
-          );
-        },
+          )
+              : const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        ),
       ),
-        )
     );
   }
 }
@@ -163,28 +95,30 @@ class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
 
   int _createdCount = 0;
+  int _backedCount = 0; // NEW: For backed project count
 
   late TabController _tabController;
   final String? userId = FirebaseAuth.instance.currentUser?.uid;
   Future<DocumentSnapshot<Map<String, dynamic>>>? _userProfileFuture;
 
-  // 1. NEW: Future to hold the created projects data fetched from Firebase
   Future<List<Project>>? _createdProjectsFuture;
+  // ⭐ NEW: Future to hold the backed projects data fetched from Firebase
+  Future<List<Project>>? _backedProjectsFuture;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
-    // Initialize the Future call to fetch profile data
     if (userId != null) {
       _userProfileFuture = FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .get();
 
-      // 2. NEW: Initialize the Future call for created projects
       _createdProjectsFuture = _getCreatedProjects();
+      // ⭐ NEW: Initialize the Future call for backed projects
+      _backedProjectsFuture = _getBackedProjects();
     }
   }
 
@@ -194,20 +128,18 @@ class _ProfilePageState extends State<ProfilePage>
     super.dispose();
   }
 
-  // 3. NEW: Function to fetch projects created by the current user
+  // Function to fetch projects created by the current user (unchanged)
   Future<List<Project>> _getCreatedProjects() async {
     if (userId == null) {
       return [];
     }
 
     try {
-      // Query the 'Projects' collection where 'creatorId' field matches the current userId
       QuerySnapshot<Map<String, dynamic>> snapshot = await FirebaseFirestore.instance
           .collection('Projects')
           .where('userId', isEqualTo: userId)
           .get();
 
-      // Map the document snapshots to a list of Project objects
       return snapshot.docs.map((doc) {
         // ASSUMPTION: Project.fromFirestore is implemented in your Project model
         return Project.fromFirestore(doc, null);
@@ -215,12 +147,60 @@ class _ProfilePageState extends State<ProfilePage>
 
     } catch (e) {
       print("Error fetching created projects: $e");
-      // Return an empty list on error
       return [];
     }
   }
 
-  // Widget to display user statistics in a card format (kept as requested)
+  // ⭐ NEW: Function to fetch projects backed by the current user
+  Future<List<Project>> _getBackedProjects() async {
+    if (userId == null) {
+      return [];
+    }
+
+    try {
+      // 1. Fetch Pledges made by this user
+      final pledgesSnapshot = await FirebaseFirestore.instance
+          .collection('Pledges')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      if (pledgesSnapshot.docs.isEmpty) {
+        return []; // No pledges found
+      }
+
+      // 2. Extract unique Project IDs from the pledges
+      final Set<String> projectIds = pledgesSnapshot.docs
+          .map((doc) => doc.data()['projectId'] as String)
+          .toSet();
+
+      // Firestore limits 'in' queries to 10 IDs, so we use a batch fetch if necessary.
+      // For simplicity, we'll assume the projectIds list is small enough.
+
+      final List<Project> backedProjects = [];
+
+      // 3. Fetch the actual Project documents using the Project IDs
+      for (final id in projectIds) {
+        final projectDoc = await FirebaseFirestore.instance
+            .collection('Projects')
+            .doc(id)
+            .get();
+
+        if (projectDoc.exists) {
+          // Map the document to the Project model
+          backedProjects.add(Project.fromFirestore(projectDoc, null));
+        }
+      }
+
+      return backedProjects;
+
+    } catch (e) {
+      print("Error fetching backed projects: $e");
+      return [];
+    }
+  }
+
+
+  // Widget to display user statistics in a card format (unchanged)
   Widget _buildStatCard({
     required String label,
     required String value,
@@ -254,11 +234,9 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  // 4. NEW: Widget to handle the Future for the "My Creations" tab content
+  // Widget to handle the Future for the "My Creations" tab content (updated count logic)
   Widget _buildCreatedProjectsTab() {
-    // If user is not logged in or Future wasn't initialized
     if (_createdProjectsFuture == null) {
-      // This case is covered by the check in the main build method, but acts as a fallback
       return const Center(child: Text('User not authenticated.'));
     }
 
@@ -273,9 +251,9 @@ class _ProfilePageState extends State<ProfilePage>
           return Center(child: Text('Error loading creations: ${snapshot.error}'));
         }
 
-        // Use the fetched list if available, otherwise an empty list
         final List<Project> userCreations = snapshot.data ?? [];
 
+        // Update the count for the header asynchronously
         final int newCount = userCreations.length;
         if (newCount != _createdCount) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -285,8 +263,41 @@ class _ProfilePageState extends State<ProfilePage>
           });
         }
 
-        // Call the general list builder with the fetched data
         return _buildProjectList(userCreations, isBacked: false);
+      },
+    );
+  }
+
+  // ⭐ NEW: Widget to handle the Future for the "Backed Projects" tab content
+  Widget _buildBackedProjectsTab() {
+    if (_backedProjectsFuture == null) {
+      return const Center(child: Text('User not authenticated.'));
+    }
+
+    return FutureBuilder<List<Project>>(
+      future: _backedProjectsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error loading backed projects: ${snapshot.error}'));
+        }
+
+        final List<Project> userBacked = snapshot.data ?? [];
+
+        // Update the count for the header asynchronously
+        final int newCount = userBacked.length;
+        if (newCount != _backedCount) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {
+              _backedCount = newCount;
+            });
+          });
+        }
+
+        return _buildProjectList(userBacked, isBacked: true);
       },
     );
   }
@@ -304,6 +315,7 @@ class _ProfilePageState extends State<ProfilePage>
       body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         future: _userProfileFuture,
         builder: (context, snapshot) {
+          // ... (Error handling and loading states remain the same) ...
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -351,7 +363,7 @@ class _ProfilePageState extends State<ProfilePage>
                       style: const TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                     const SizedBox(height: 8),
-                    // Stat Cards Row (Still using mock data)
+                    // Stat Cards Row (Now uses real count for created, and new count for backed)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
@@ -362,7 +374,7 @@ class _ProfilePageState extends State<ProfilePage>
                         ),
                         _buildStatCard(
                           label: 'Backed',
-                          value: mockUser['totalProjectsBacked'].toString(),
+                          value: _backedCount.toString(), // ⭐ UPDATED TO USE REAL COUNT
                           icon: Icons.wallet_giftcard,
                         ),
                       ],
@@ -388,11 +400,11 @@ class _ProfilePageState extends State<ProfilePage>
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    // Tab 1: Created Projects (NOW DYNAMIC)
+                    // Tab 1: Created Projects (Dynamic)
                     _buildCreatedProjectsTab(),
 
-                    // Tab 2: Backed Projects (STILL USING MOCK DATA)
-                    _buildProjectList(backedProjects, isBacked: true),
+                    // Tab 2: Backed Projects (NOW DYNAMIC)
+                    _buildBackedProjectsTab(), // ⭐ USING NEW DYNAMIC WIDGET
                   ],
                 ),
               ),
@@ -404,41 +416,79 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   // Helper widget to build the ListView for the tab content (kept same)
+  // Helper widget to build the ListView for the tab content (UPDATED navigation)
+  // ... inside _ProfilePageState
+  // Helper widget to build the ListView for the tab content (Complete and Robust)
   Widget _buildProjectList(List<Project> projects, {required bool isBacked}) {
+    // 1. **CRITICAL CHECK: Handle the empty state immediately.**
     if (projects.isEmpty) {
       return Center(
-        child: InkWell(
-          onTap: (){
-
-          },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isBacked
-                  ? Icons.monetization_on_outlined
-                  : Icons.palette_outlined,
-              size: 60,
-              color: Colors.grey[300],
+          child: InkWell(
+            onTap: (){
+              // Optional: action for tapping the empty state message
+            },
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isBacked
+                      ? Icons.monetization_on_outlined
+                      : Icons.palette_outlined,
+                  size: 60,
+                  color: Colors.grey[300],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  isBacked
+                      ? 'No projects backed yet.'
+                      : 'Time to launch your first project!',
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
-            Text(
-              isBacked
-                  ? 'No projects backed yet.'
-                  : 'Time to launch your first project!',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            ),
-          ],
-        ),
-        )
+          )
       );
     }
 
+    // 2. Build the list only if projects is NOT empty
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
-      itemCount: projects.length,
+      itemCount: projects.length, // List length is guaranteed > 0 here
       itemBuilder: (context, index) {
-        return ProjectCard(project: projects[index], isBacked: isBacked);
+        // Ensure index access is safe (it is, since itemCount == projects.length)
+        final project = projects[index];
+
+        void navigationCallback() {
+          if (!isBacked) {
+            // My Creations Tab: Go to Creator Analytics Page
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CreatorAnalyticsPage(
+                  projectId: project.projectId,
+                  projectTitle: project.title,
+                ),
+              ),
+            );
+          } else {
+            // Backed Projects Tab: Go to DEDICATED Pledge Details Page
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BackedPledgeDetailsPage(
+                  projectId: project.projectId,
+                  projectTitle: project.title,
+                ),
+              ),
+            );
+          }
+        }
+
+        return ProjectCard(
+          project: project,
+          isBacked: isBacked,
+          onTap: navigationCallback,
+        );
       },
     );
   }

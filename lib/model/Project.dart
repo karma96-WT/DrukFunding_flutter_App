@@ -7,7 +7,6 @@ class Project {
   final String imageUrl;
   final String category;
   final double raised;
-  final int likes;
   final double goal;
   final String creatorImageUrl;
   final DateTime? createdAt; // add this field
@@ -19,7 +18,6 @@ class Project {
     required this.imageUrl,
     required this.category,
     required this.raised,
-    required this.likes,
     required this.goal,
     required this.creatorImageUrl,
     this.createdAt, // optional
@@ -41,7 +39,6 @@ class Project {
       imageUrl: data['imageUrl'] ?? 'https://placehold.co/600x400/CCCCCC/000000?text=No+Image',
       category: data['category'] ?? 'General',
       raised: (data['raised'] as num?)?.toDouble() ?? 0.0,
-      likes: data['likes'] ?? 0,
       goal: (data['goal'] as num?)?.toDouble() ?? 1.0,
       creatorImageUrl: data['creatorImageUrl'] ?? 'https://placehold.co/50x50/000000/FFFFFF?text=?',
     );

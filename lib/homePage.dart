@@ -1,16 +1,18 @@
 import 'package:drukfunding/create_page.dart';
 import 'package:drukfunding/notification.dart';
 import 'package:drukfunding/pledgePage.dart';
+import 'package:drukfunding/profile_setting.dart';
+import 'package:drukfunding/rating_page.dart';
 import 'package:flutter/material.dart';
 import 'ProfilePage.dart';
 import 'ProjectDetailPage.dart';
 import 'SearchPage.dart';
 import 'FavouritePage.dart';
 import 'package:drukfunding/model/Project.dart';
+import 'help_page.dart';
 import 'loginPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 
 void main() {
   runApp(const CrowdfundingApp());
@@ -53,7 +55,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-
+  // Logout functionality
   void _handleMenuSelection(String value) {
     if (value == 'logout') {
       Navigator.pop(context);
@@ -65,13 +67,9 @@ class _HomePageState extends State<HomePage> {
         ),
       );
       // or navigate to login page
-    } else if (value == 'profile') {
-      // navigate to profile page
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile clicked')),
-      );
     }
   }
+
   // list of pages
   final List<Widget> _pages = [
     const HomeContent(),
@@ -87,14 +85,17 @@ class _HomePageState extends State<HomePage> {
         elevation: 0,
         backgroundColor: const Color.fromARGB(255, 47, 117, 223),
         title: const Text(
+          // Title of the App
           'DrukFunding',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         leading: Builder(
           builder: (context) {
             return IconButton(
+              // menu button
               icon: const Icon(Icons.menu, color: Colors.black87),
               onPressed: () {
+                // Opens the drawer
                 Scaffold.of(context).openDrawer();
               },
             );
@@ -102,6 +103,7 @@ class _HomePageState extends State<HomePage> {
         ),
         centerTitle: true,
         leadingWidth: 40,
+
         // User Profile and Notification Icons
         actions: [
           IconButton(
@@ -140,22 +142,47 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Build Drawer
   Drawer _buildDrawer() {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
-        children: const <Widget>[
+        children:  <Widget>[
           DrawerHeader(
             decoration: BoxDecoration(color: Colors.blue),
             child: Text(
-              'Menu',
+              'More Navigation',
               style: TextStyle(color: Colors.white, fontSize: 24),
             ),
           ),
-          ListTile(leading: Icon(Icons.person), title: Text('Profile Setting')),
-          ListTile(leading: Icon(Icons.help), title: Text('Help')),
-          ListTile(leading: Icon(Icons.question_answer), title: Text('FAQ')),
-          ListTile(leading: Icon(Icons.star), title: Text('Rating')),
+          ListTile(leading: Icon(Icons.person), title: Text('Profile Setting'),onTap:() {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>  ProfileSettingsPage(),
+              ),
+            );
+          },),
+          ListTile(leading: Icon(Icons.help), title: Text('Help & FAQ'),
+          onTap: () {
+            Navigator.pop(context); // Close the drawer
+            // Navigate to the new help page
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const HelpPage(), // Navigate to HelpPage
+              ),
+            );
+          },),
+          ListTile(leading: Icon(Icons.star), title: Text('Rating'),
+          onTap: (){
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const RatingPage(), // Navigate to Rating page
+              ),
+            );
+          },),
         ],
       ),
     );
@@ -166,8 +193,8 @@ class _HomePageState extends State<HomePage> {
   Widget _buildBottomNavBar() {
     return BottomNavigationBar(
       type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedItemColor: Colors.blue[600],
+      backgroundColor: Colors.blue,
+      selectedItemColor: Colors.white,
       unselectedItemColor: Colors.grey[400],
       currentIndex: _selectedIndex,
       onTap: _onItemTapped,
@@ -175,10 +202,19 @@ class _HomePageState extends State<HomePage> {
       showUnselectedLabels: false, // Matches the look in the image
       elevation: 4.0,
       items: const <BottomNavigationBarItem>[
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-        BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Create'),
-        // 🔑 Updated icon and label for "Saved"
+        BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home'
+        ),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Search'
+        ),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.add),
+            label: 'Create'
+        ),
+        // Updated icon and label for "Saved"
         BottomNavigationBarItem(
           icon: Icon(Icons.save),
           label: 'Saved',
@@ -210,13 +246,15 @@ class HomeContent extends StatefulWidget {
   State<HomeContent> createState() => _HomeContentState();
 }
 
+// HomePage contents
 class _HomeContentState extends State<HomeContent> {
   @override
   Widget build(BuildContext context) {
-    // Listen to Firestore "Projects" collection
+    // Retrieve data  from Firestore "Projects" collection
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('Projects')
+          .where('status', isEqualTo: 'accepted')
           .orderBy('createdAt', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
@@ -238,7 +276,6 @@ class _HomeContentState extends State<HomeContent> {
           );
         }
 
-
         // Convert Firestore documents into Project objects
         final List<Project> projects = snapshot.data!.docs.map((doc) {
           final data = doc.data() as Map<String, dynamic>;
@@ -251,7 +288,6 @@ class _HomeContentState extends State<HomeContent> {
             category: data['category'] ?? 'Other',
             raised: (data['raised'] ?? 0).toDouble(),
             // Keeping 'likes' here, but it will no longer be updated by the save function.
-            likes: (data['likes'] as num?)?.toInt() ?? 0,
             goal: (data['goal'] ?? 0).toDouble(),
             creatorImageUrl: data['creatorImageUrl'] ?? 'https://placehold.co/50x50',
             createdAt: timestamp?.toDate(), // convert Timestamp to DateTime

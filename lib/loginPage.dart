@@ -1,4 +1,6 @@
+// importing libraries and packages
 import 'package:flutter/material.dart';
+import 'admins_page.dart';
 import 'homePage.dart';
 import 'registration.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,7 +14,9 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
 
+  // Get email account
   final TextEditingController emailControler = TextEditingController();
+  // Get the password
   final TextEditingController passwordControler = TextEditingController();
 
   // Firebase instance and loading state
@@ -26,21 +30,33 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // 2. Call Firebase Sign In
+      // Handle admin login
+      if (emailControler.text.trim() == 'admin@gmail.com' && passwordControler.text.trim() == 'admin'){
+        Navigator.pushReplacement(
+            context,
+            // Directs to AdminPage if the credentials matches
+            MaterialPageRoute(builder: (context) => const AdminPage())
+        );
+      }
+
+      // Call Firebase Sign In to verify emails and password
       await _auth.signInWithEmailAndPassword(
         email: emailControler.text.trim(),
         password: passwordControler.text.trim(),
       );
 
-      // 3. Success: Navigate to the main app (CrowdfundingApp)
+      // Success: Navigate to the main app (CrowdfundingApp)
       if (mounted) {
         Navigator.pushReplacement(
             context,
+            // Navigate to main page
             MaterialPageRoute(builder: (context) => const CrowdfundingApp())
         );
       }
 
-    } on FirebaseAuthException catch (e) {
+    }
+    // On Failure
+    on FirebaseAuthException catch (e) {
       String message = 'Login Failed. Invalid email or password.';
 
       // Customize error messages
@@ -60,8 +76,9 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('An unknown error occurred.'), backgroundColor: Colors.red)
       );
-    } finally {
-      // 4. Reset loading state
+    }
+    // 4. Reset loading state
+    finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -70,7 +87,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-
+  // Navigating to registration page
   void Register(){
     // push to registration page
     Navigator.push(context,
@@ -134,7 +151,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 10,),
               ElevatedButton(
-                onPressed: Login,
+                onPressed: Login, // call login function
                 child: const Text('LOGIN',
                     style: TextStyle(fontSize: 18,color: Colors.white)),
                 style: ElevatedButton.styleFrom(
